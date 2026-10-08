@@ -1,0 +1,17 @@
+emergency_id,location_id,type,severity,required_capability,required_facility,status
+101,0,Accident,4,Trauma,Trauma,WAITING
+102,2,Cardiac Emergency,4,Cardiac,Cardiology,WAITING
+103,9,Breathing Problem,3,Oxygen,Emergency,WAITING
+104,16,Sports Injury,2,Trauma,Trauma,WAITING
+105,17,Burn Injury,4,BurnSupport,BurnUnit,WAITING
+106,18,Child Emergency,3,Pediatric,Pediatrics,WAITING
+107,9,Maternity Emergency,3,Maternity,Maternity,WAITING
+108,19,Accident,3,Trauma,Trauma,WAITING
+109,1,Cardiac Emergency,4,Cardiac,Cardiology,WAITING
+110,15,Breathing Problem,2,Oxygen,Emergency,WAITING
+111,3,Critical Care Request,4,ICU,ICU,WAITING
+112,16,Child Emergency,2,Pediatric,Pediatrics,WAITING
+113,18,Medical Assistance,1,Oxygen,Emergency,WAITING
+114,2,Maternity Emergency,4,Maternity,Maternity,WAITING
+115,17,Accident,3,Trauma,Trauma,WAITING
+116,19,Medical Assistance,1,Oxygen,Emergency,WAITING

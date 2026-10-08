@@ -1,0 +1,9 @@
+hospital_id,name,location_id,status,facilities
+1,City Hospital,6,AVAILABLE,Emergency;ICU;Cardiology
+2,General Hospital,7,AVAILABLE,Emergency;General Surgery
+3,Trauma Centre,8,AVAILABLE,Trauma;ICU;Emergency Surgery
+4,Heart Care Hospital,10,AVAILABLE,Cardiology;ICU;Emergency
+5,Children Hospital,11,AVAILABLE,Pediatrics;Emergency
+6,Burn Care Hospital,12,AVAILABLE,BurnUnit;ICU;Emergency
+7,Community Hospital,13,UNAVAILABLE,Emergency;General Surgery;Pediatrics
+8,Maternity Hospital,14,AVAILABLE,Maternity;Emergency
