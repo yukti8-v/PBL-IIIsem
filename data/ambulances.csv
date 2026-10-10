@@ -1,0 +1,13 @@
+ambulance_id,location_id,status,type,capabilities
+1,4,AVAILABLE,Basic,Oxygen
+2,5,AVAILABLE,Advanced,Trauma;Oxygen;Cardiac
+3,3,UNAVAILABLE,Advanced,Trauma;ICU;Oxygen
+4,9,AVAILABLE,Cardiac,Cardiac;Oxygen
+5,15,AVAILABLE,Advanced,Trauma;Oxygen;ICU
+6,16,AVAILABLE,Basic,Oxygen
+7,17,AVAILABLE,Burn Support,BurnSupport;Oxygen
+8,18,AVAILABLE,Pediatric,Pediatric;Oxygen
+9,19,UNAVAILABLE,Advanced,Trauma;Oxygen
+10,0,AVAILABLE,Maternity,Maternity;Oxygen
+11,10,AVAILABLE,Critical Care,ICU;Cardiac;Oxygen
+12,13,AVAILABLE,Advanced,Trauma;Pediatric;Oxygen
