@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <title>RescueRoute | Emergency Routing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <h2>🚑 RescueRoute</h2>
+        <p>Emergency Response System</p>
+        <nav>
+            <a href="#planner">🗺️ Route Planner</a>
+            <a href="#closure">🚧 Road Closure</a>
+            <a href="#results">📊 Route Results</a>
+            <a href="#fleet">🚑 Ambulance Fleet</a>
+            <a href="#hospitals">🏥 Hospitals</a>
+            <a href="#dispatch">🧑‍⚕️ Patient Dispatch</a>
+            <a href="#log">📋 Dispatch Log</a>
+        </nav>
+        <div class="sidebar-bottom">
+            Dehradun Road Network<br>
+            Phase-II Prototype
+        </div>
+    </aside>
+
+    <main class="main">
+        <header>
+            <div>
+                <h1>Emergency Routing Dashboard</h1>
+                <p>Smart shortest-path and road closure simulation</p>
+            </div>
+            <span class="status">● System Online</span>
+        </header>
+
+        <div class="stats">
+            <div class="stat">
+                <span>Locations</span>
+                <strong id="locationCount">—</strong>
+            </div>
+            <div class="stat">
+                <span>Shortest Distance</span>
+                <strong id="distanceStat">—</strong>
+            </div>
+            <div class="stat">
+                <span>Est. Time</span>
+                <strong id="etaStat">—</strong>
+            </div>
+            <div class="stat">
+                <span>Route Status</span>
+                <strong id="statusStat">Idle</strong>
+            </div>
+            <div class="stat">
+                <span>Blocked Road</span>
+                <strong id="closureStat">None</strong>
+            </div>
+            <div class="stat">
+                <span>Ambulances Free</span>
+                <strong id="fleetStat">—</strong>
+            </div>
+            <div class="stat">
+                <span>Hospitals Open</span>
+                <strong id="hospitalStat">—</strong>
+            </div>
+        </div>
+
+        <div id="toast" class="toast"></div>
+
+        <section class="panel" id="planner">
+            <h2>🗺️ Find Shortest Route</h2>
+            <p>Select two Dehradun locations.</p>
+
+            <div class="fields">
+                <div>
+                    <label for="source">Source Location</label>
+                    <select id="source"></select>
+                </div>
+                <div>
+                    <label for="destination">Destination</label>
+                    <select id="destination"></select>
+                </div>
+            </div>
+
+            <button id="findRoute">Find Shortest Route</button>
+            <button id="nearest" class="secondary">🏥 Nearest Hospital</button>
+        </section>
+
+        <section class="panel" id="closure">
+            <h2>🚧 Smart Road Closure</h2>
+            <p>Simulate a blocked road and calculate
+               an alternative route using Dijkstra.</p>
+
+            <div class="fields">
+                <div>
+                    <label for="roadStart">Blocked Road From</label>
+                    <select id="roadStart"></select>
+                </div>
+                <div>
+                    <label for="roadEnd">Blocked Road To</label>
+                    <select id="roadEnd"></select>
+                </div>
+            </div>
+
+            <button id="reroute" class="danger">
+                Block Road & Recalculate
+            </button>
+            <button id="reset" class="secondary">
+                Reset Road Closure
+            </button>
+        </section>
+
+        <section class="panel" id="results">
+            <h2>📍 Routing Results</h2>
+            <div id="result" class="result">
+                Select locations and click Find Shortest Route.
+            </div>
+        </section>
+
+        <section class="panel" id="fleet">
+            <h2>🚑 Ambulance Fleet</h2>
+            <p>Live status of every ambulance. Busy ambulances are
+               freed when you click Complete in the Dispatch Log.</p>
+            <div id="fleetGrid" class="fleet-grid"></div>
+        </section>
+
+        <section class="panel" id="hospitals">
+            <h2>🏥 Hospitals</h2>
+            <p>Facilities and availability. Hospitals that can treat the
+               condition selected in Patient Dispatch are highlighted.</p>
+            <div id="hospitalGrid" class="fleet-grid"></div>
+        </section>
+
+        <section class="panel" id="dispatch">
+            <h2>🧑‍⚕️ Patient Dispatch</h2>
+            <p>Pickup is the Source Location chosen in Route Planner.
+               The nearest suitable ambulance is assigned automatically.</p>
+
+            <div class="fields">
+                <div>
+                    <label for="patientName">Patient Name</label>
+                    <input type="text" id="patientName"
+                           placeholder="e.g. Rahul Sharma">
+                </div>
+                <div>
+                    <label for="patientAge">Age</label>
+                    <input type="number" id="patientAge"
+                           min="0" max="120" placeholder="e.g. 45">
+                </div>
+                <div>
+                    <label for="condition">Condition</label>
+                    <select id="condition">
+                        <option>Cardiac Arrest</option>
+                        <option>Road Accident</option>
+                        <option>Stroke</option>
+                        <option>Burns</option>
+                        <option>Breathing Difficulty</option>
+                        <option>Pregnancy / Delivery</option>
+                        <option>Child Emergency</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="severity">Severity</label>
+                    <select id="severity">
+                        <option>Critical</option>
+                        <option>Serious</option>
+                        <option>Stable</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="check">
+                <input type="checkbox" id="autoHospital" checked>
+                Auto-pick best hospital for the condition (ignores the Destination dropdown)
+            </label>
+
+            <button id="dispatchBtn" class="danger">
+                🚑 Dispatch Ambulance
+            </button>
+        </section>
+
+        <section class="panel" id="log">
+            <h2>📋 Dispatch Log</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Time</th>
+                            <th>Patient</th>
+                            <th>Condition</th>
+                            <th>Severity</th>
+                            <th>Ambulance</th>
+                            <th>Route</th>
+                            <th>Total</th>
+                            <th>ETA</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody"></tbody>
+                </table>
+            </div>
+            <button id="clearLog" class="secondary">Clear Log</button>
+        </section>
+    </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
