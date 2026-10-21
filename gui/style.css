@@ -491,3 +491,40 @@ th {
     .fields { grid-template-columns: 1fr; }
     header { flex-wrap: wrap; }
 }
+
+/* ---------- Road closure list ---------- */
+.block-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.block-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--danger);
+    background: rgba(239, 83, 80, 0.12);
+    color: #f4a6a3;
+    font-size: 13px;
+}
+
+button.chip-x {
+    margin: 0;
+    padding: 0 7px;
+    background: none;
+    color: #f4a6a3;
+    box-shadow: none;
+    font-size: 16px;
+    line-height: 1.2;
+    border-radius: 999px;
+}
+
+button.chip-x:hover {
+    transform: none;
+    box-shadow: none;
+    background: rgba(239, 83, 80, 0.25);
+}

@@ -1,0 +1,45 @@
+RESCUEROUTE - TEST CASES
+
+Test environment:
+1. Rebuild routing_cli.exe from the updated routing_cli.cpp
+2. Run: python gui/server.py and open http://127.0.0.1:8000
+3. Click "Clear Log" before the dispatch tests
+4. Run CLI commands from the project root folder
+
+CLI output format: found distance originalDistance pathLength pathIDs...
+TEST 1: Severity tagging in dispatch log
+Module: Patient dispatch / triage tagging
+Steps:
+  1. Click "Clear Log". Source = Clock Tower, auto-pick hospital ticked.
+  2. Dispatch patient 1: Aman, age 30, Road Accident, Severity = Critical.
+  3. Dispatch patient 2: Riya, age 25, Stroke, Severity = Serious.
+  4. Dispatch patient 3: Karan, age 40, Other, Severity = Stable.
+  5. Check the Dispatch Log (and data/dispatches.json).
+Expected Result: Each patient's severity is recorded and shown in the
+  dispatch log (red Critical, amber Serious, green Stable badge).
+Observed Result: Severity recorded for all 3 patients and shown as colored badges in the dispatch log
+Status:Pass
+TEST 2: Shortest path
+Module: Dijkstra shortest path (routing_cli.exe)
+Input: routing_cli.exe 0 6   (Clock Tower -> City Hospital)
+Expected Result: Minimum distance route.
+  Output: 1 6.3 6.3 4 0 18 3 6
+  Route: Clock Tower -> Market Area -> Railway Station -> City Hospital (6.3 km)
+Observed Result:routing_cli.exe 0 6 printed "1 6.3 6.3 4 0 18 3 6". Route Clock Tower -> Market Area -> Railway Station -> City Hospital, minimum distance 6.3 km. Dashboard showed 6.30 km with the same route.
+Status: Pass
+
+
+TEST 3: Unreachable destination
+Module: Edge case handling (road closure)
+Input: routing_cli.exe 0 4 0 4 4 16
+  (both roads of Ambulance Station A are closed)
+Expected Result: No valid route is returned.
+  Output: 0 -1 5.1 0
+  Dashboard: "No route available" message, Route Status "No Route",
+  dispatch to that destination is refused.
+Observed Result: routing_cli.exe 0 4 0 4 4 16 printed "0 -1 5.1 0". Dashboard showed "No route available", Route Status "No Route", distance and ETA N/A, and dispatch to that location was refused.
+Status: Pass
+
+
+RESULT SUMMARY
+Tests run: 3   Passed: __   Failed: __
