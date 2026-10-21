@@ -89,6 +89,48 @@ def road_exists(a, b):
     return False
 
 
+def normalize_blocks(raw_pairs, valid_ids):
+    blocks = []
+    seen = set()
+
+    for pair in raw_pairs:
+        a = int(pair[0])
+        b = int(pair[1])
+
+        if a not in valid_ids or b not in valid_ids:
+            raise ValueError("Invalid blocked road locations")
+        if a == b:
+            raise ValueError("Blocked road needs two different locations")
+        if not road_exists(a, b):
+            raise ValueError("Selected road does not exist")
+
+        key = (min(a, b), max(a, b))
+        if key in seen:
+            continue
+
+        seen.add(key)
+        blocks.append((a, b))
+
+    return blocks
+
+
+def parse_blocks_text(text):
+    pairs = []
+
+    for part in text.split(","):
+        part = part.strip()
+        if part == "":
+            continue
+
+        pieces = part.split("-")
+        if len(pieces) != 2:
+            raise ValueError("Invalid blocked road list")
+
+        pairs.append((int(pieces[0]), int(pieces[1])))
+
+    return pairs
+
+
 # ---------- Hospitals ----------
 
 def split_list(text):
@@ -122,7 +164,7 @@ def available_hospitals():
     return result
 
 
-def nearest_in_pool(pool, source, block_a, block_b):
+def nearest_in_pool(pool, source, blocks):
     best_hospital = None
     best_route = None
 
@@ -130,7 +172,7 @@ def nearest_in_pool(pool, source, block_a, block_b):
         if hospital["location"] == source:
             continue
 
-        route = run_route(source, hospital["location"], block_a, block_b)
+        route = run_route(source, hospital["location"], blocks)
 
         if not route["found"]:
             continue
@@ -142,7 +184,7 @@ def nearest_in_pool(pool, source, block_a, block_b):
     return best_hospital, best_route
 
 
-def find_best_hospital(source, condition, block_a=None, block_b=None):
+def find_best_hospital(source, condition, blocks=None):
     need = CONDITION_FACILITY.get(condition, "Emergency")
 
     available = available_hospitals()
@@ -160,13 +202,13 @@ def find_best_hospital(source, condition, block_a=None, block_b=None):
 
     if len(matching) > 0:
         best_hospital, best_route = nearest_in_pool(
-            matching, source, block_a, block_b
+            matching, source, blocks
         )
 
     if best_hospital is None:
         matched = False
         best_hospital, best_route = nearest_in_pool(
-            available, source, block_a, block_b
+            available, source, blocks
         )
 
     if best_hospital is None:
@@ -221,7 +263,7 @@ def fleet_with_status():
     return fleet
 
 
-def pick_ambulance(source, condition, block_a, block_b):
+def pick_ambulance(source, condition, blocks):
     need = CONDITION_NEEDS.get(condition, "Oxygen")
 
     free = []
@@ -252,7 +294,7 @@ def pick_ambulance(source, condition, block_a, block_b):
                 "path": [source]
             }
         else:
-            leg = run_route(amb["location"], source, block_a, block_b)
+            leg = run_route(amb["location"], source, blocks)
 
         if not leg["found"]:
             continue
@@ -286,11 +328,13 @@ def save_dispatches(items):
 
 # ---------- Routing ----------
 
-def run_route(source, destination, block_a=None, block_b=None):
+def run_route(source, destination, blocks=None):
     args = [str(EXE), str(source), str(destination)]
 
-    if block_a is not None and block_b is not None:
-        args += [str(block_a), str(block_b)]
+    if blocks is not None:
+        for pair in blocks:
+            args.append(str(pair[0]))
+            args.append(str(pair[1]))
 
     result = subprocess.run(
         args,
@@ -405,15 +449,7 @@ class Handler(SimpleHTTPRequestHandler):
             if source not in valid_ids:
                 raise ValueError("Invalid pickup location")
 
-            block_a = None
-            block_b = None
-
-            if (body.get("blockA") is not None
-                    and body.get("blockB") is not None):
-                block_a = int(body["blockA"])
-                block_b = int(body["blockB"])
-                if not road_exists(block_a, block_b):
-                    raise ValueError("Selected road does not exist")
+            blocks = normalize_blocks(body.get("blocks") or [], valid_ids)
 
             hospital_name = ""
             hospital_need = CONDITION_FACILITY.get(condition, "Emergency")
@@ -422,7 +458,7 @@ class Handler(SimpleHTTPRequestHandler):
             if body.get("autoHospital"):
                 hospital, route, hospital_matched, hospital_need = (
                     find_best_hospital(
-                        source, condition, block_a, block_b
+                        source, condition, blocks
                     )
                 )
                 destination = hospital["location"]
@@ -434,7 +470,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if destination == source:
                     raise ValueError("Pickup and hospital must differ")
 
-                route = run_route(source, destination, block_a, block_b)
+                route = run_route(source, destination, blocks)
 
                 hospital_matched = False
                 for hospital in read_hospitals():
@@ -448,7 +484,7 @@ class Handler(SimpleHTTPRequestHandler):
 
             with LOCK:
                 amb, leg, matched, need = pick_ambulance(
-                    source, condition, block_a, block_b
+                    source, condition, blocks
                 )
 
                 total = leg["distance"] + route["distance"]
@@ -478,7 +514,8 @@ class Handler(SimpleHTTPRequestHandler):
                     "needed": need,
                     "matched": matched,
                     "eta": eta,
-                    "rerouted": block_a is not None,
+                    "rerouted": len(blocks) > 0,
+                    "blocked": [list(p) for p in blocks],
                     "status": "En Route"
                 }
                 items.append(record)
@@ -580,28 +617,13 @@ class Handler(SimpleHTTPRequestHandler):
                 if source not in valid_ids or destination not in valid_ids:
                     raise ValueError("Invalid source or destination")
 
-                a_values = params.get("blockA")
-                b_values = params.get("blockB")
+                blocks = []
+                if params.get("blocks"):
+                    blocks = normalize_blocks(
+                        parse_blocks_text(params["blocks"][0]), valid_ids
+                    )
 
-                if bool(a_values) != bool(b_values):
-                    raise ValueError("Both blocked road IDs are required")
-
-                block_a = None
-                block_b = None
-
-                if a_values and b_values:
-                    block_a = int(a_values[0])
-                    block_b = int(b_values[0])
-
-                    if block_a not in valid_ids or block_b not in valid_ids:
-                        raise ValueError("Invalid blocked road locations")
-
-                    if not road_exists(block_a, block_b):
-                        raise ValueError("Selected road does not exist")
-
-                self.send_json(
-                    run_route(source, destination, block_a, block_b)
-                )
+                self.send_json(run_route(source, destination, blocks))
 
             except (ValueError, KeyError, IndexError) as e:
                 self.send_json({"error": str(e)}, 400)

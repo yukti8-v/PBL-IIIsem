@@ -1,9 +1,9 @@
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <utility>
 #include <cmath>
 
 #include "RoutingSystem.h"
@@ -18,23 +18,33 @@ struct Road {
 
 int main(int argc, char* argv[]) {
     // Usage:
-    // routing_cli.exe source destination [blockedA blockedB]
+    // routing_cli.exe source destination [blockedA blockedB] [blockedA blockedB] ...
+    //
+    // Any number of blocked road pairs can follow the destination.
+    // Output: found distance originalDistance pathLength pathIDs...
 
-    if (argc != 3 && argc != 5) {
+    if (argc < 3) {
         cerr << "Invalid arguments\n";
         return 1;
     }
 
-    int source, destination;
-    int blockedA = -1, blockedB = -1;
+    if ((argc % 2) == 0) {
+        cerr << "Blocked roads must be given as pairs\n";
+        return 1;
+    }
+
+    int source = 0;
+    int destination = 0;
+    vector<pair<int, int> > blockedRoads;
 
     try {
         source = stoi(argv[1]);
         destination = stoi(argv[2]);
 
-        if (argc == 5) {
-            blockedA = stoi(argv[3]);
-            blockedB = stoi(argv[4]);
+        for (int i = 3; i < argc; i = i + 2) {
+            int blockedA = stoi(argv[i]);
+            int blockedB = stoi(argv[i + 1]);
+            blockedRoads.push_back(make_pair(blockedA, blockedB));
         }
     } catch (...) {
         cerr << "Invalid location ID\n";
@@ -43,7 +53,7 @@ int main(int argc, char* argv[]) {
 
     ifstream file("data/roads.csv");
 
-    if (!file.is_open()) {
+    if (file.is_open() == false) {
         cerr << "Cannot open data/roads.csv\n";
         return 1;
     }
@@ -55,10 +65,14 @@ int main(int argc, char* argv[]) {
     int maxID = -1;
 
     while (getline(file, line)) {
-        if (line.empty()) continue;
+        if (line.empty()) {
+            continue;
+        }
 
         stringstream ss(line);
-        string a, b, d;
+        string a;
+        string b;
+        string d;
 
         getline(ss, a, ',');
         getline(ss, b, ',');
@@ -70,14 +84,20 @@ int main(int argc, char* argv[]) {
             if (r.from < 0 || r.to < 0 ||
                 r.from >= MAX_LOCATIONS ||
                 r.to >= MAX_LOCATIONS ||
-                !std::isfinite(r.km) ||
-                r.km <= 0 || r.km >= INF)
+                std::isfinite(r.km) == false ||
+                r.km <= 0 || r.km >= INF) {
                 continue;
+            }
 
             roads.push_back(r);
 
-            if (r.from > maxID) maxID = r.from;
-            if (r.to > maxID) maxID = r.to;
+            if (r.from > maxID) {
+                maxID = r.from;
+            }
+
+            if (r.to > maxID) {
+                maxID = r.to;
+            }
 
         } catch (...) {
             continue;
@@ -101,7 +121,9 @@ int main(int argc, char* argv[]) {
     Graph graph;
     initializeGraph(&graph, maxID + 1);
 
-    for (const Road& r : roads) {
+    for (size_t i = 0; i < roads.size(); i = i + 1) {
+        const Road& r = roads[i];
+
         // Keep shortest distance for duplicate roads
         if (r.km < graph.adjacencyMatrix[r.from][r.to]) {
             addRoad(&graph, r.from, r.to, r.km);
@@ -114,7 +136,11 @@ int main(int argc, char* argv[]) {
     RouteResult original =
         routing.getShortestRoute(source, destination);
 
-    if (argc == 5) {
+    // Check that every blocked road exists before removing any of them
+    for (size_t i = 0; i < blockedRoads.size(); i = i + 1) {
+        int blockedA = blockedRoads[i].first;
+        int blockedB = blockedRoads[i].second;
+
         if (blockedA < 0 || blockedB < 0 ||
             blockedA > maxID || blockedB > maxID ||
             blockedA == blockedB ||
@@ -122,9 +148,17 @@ int main(int argc, char* argv[]) {
             cerr << "Selected road does not exist\n";
             return 1;
         }
+    }
 
-        // Simulate a road closure
-        removeRoad(&graph, blockedA, blockedB);
+    // Simulate the road closures
+    for (size_t i = 0; i < blockedRoads.size(); i = i + 1) {
+        int blockedA = blockedRoads[i].first;
+        int blockedB = blockedRoads[i].second;
+
+        // Skip a road that was already removed (duplicate pair)
+        if (graph.adjacencyMatrix[blockedA][blockedB] != INF) {
+            removeRoad(&graph, blockedA, blockedB);
+        }
     }
 
     RouteResult result =

@@ -90,8 +90,9 @@
 
         <section class="panel" id="closure">
             <h2>🚧 Smart Road Closure</h2>
-            <p>Simulate a blocked road and calculate
-               an alternative route using Dijkstra.</p>
+            <p>Block one or more roads, then calculate an alternative
+               route using Dijkstra. If every path is cut off, the
+               system reports no route.</p>
 
             <div class="fields">
                 <div>
@@ -104,8 +105,13 @@
                 </div>
             </div>
 
+            <button id="addBlock" class="secondary">
+                + Add road to closure
+            </button>
+            <div id="blockList" class="block-list"></div>
+
             <button id="reroute" class="danger">
-                Block Road & Recalculate
+                Block Roads & Recalculate
             </button>
             <button id="reset" class="secondary">
                 Reset Road Closure

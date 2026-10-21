@@ -16,7 +16,7 @@ const CONDITION_FACILITY = {
 let locations = [];
 let roads = [];
 let currentRoute = null;
-let activeBlock = null;
+let activeBlocks = [];
 
 /* ---------- Helpers ---------- */
 
@@ -339,9 +339,7 @@ async function findRoute() {
             `/api/route?source=${source}&destination=${destination}`
         );
 
-        activeBlock = null;
-        $("closureStat").textContent = "None";
-        $("closureStat").style.color = "";
+        clearBlocks();
         renderRoute(data, false);
     } catch (error) {
         showError(error.message);
@@ -361,9 +359,7 @@ async function nearestHospital() {
         );
 
         $("destination").value = data.hospitalId;
-        activeBlock = null;
-        $("closureStat").textContent = "None";
-        $("closureStat").style.color = "";
+        clearBlocks();
         renderRoute(data, false);
     } catch (error) {
         showError(error.message);
@@ -372,19 +368,108 @@ async function nearestHospital() {
     }
 }
 
+/* ---------- Road closures (one or many roads) ---------- */
+
+function blocksQuery() {
+    return activeBlocks.map(pair => `${pair[0]}-${pair[1]}`).join(",");
+}
+
+function updateClosureStat() {
+    const stat = $("closureStat");
+
+    if (activeBlocks.length === 0) {
+        stat.textContent = "None";
+        stat.style.color = "";
+    } else if (activeBlocks.length === 1) {
+        stat.textContent =
+            `${nameOf(activeBlocks[0][0])} → ${nameOf(activeBlocks[0][1])}`;
+        stat.style.color = "#ef5350";
+    } else {
+        stat.textContent = `${activeBlocks.length} roads`;
+        stat.style.color = "#ef5350";
+    }
+}
+
+function renderBlockList() {
+    const list = $("blockList");
+    list.replaceChildren();
+
+    activeBlocks.forEach((pair, index) => {
+        const chip = document.createElement("span");
+        chip.className = "block-chip";
+        chip.textContent = `${nameOf(pair[0])} ↔ ${nameOf(pair[1])}`;
+
+        const remove = document.createElement("button");
+        remove.className = "chip-x";
+        remove.textContent = "×";
+        remove.title = "Remove this closure";
+        remove.addEventListener("click", () => {
+            removeBlock(index);
+        });
+
+        chip.appendChild(remove);
+        list.appendChild(chip);
+    });
+}
+
+function pairInList(a, b) {
+    return activeBlocks.some(pair =>
+        (pair[0] === a && pair[1] === b) ||
+        (pair[0] === b && pair[1] === a)
+    );
+}
+
+function addBlock() {
+    const a = Number($("roadStart").value);
+    const b = Number($("roadEnd").value);
+
+    if ($("roadEnd").value === "" || a === b) {
+        showError("Choose a valid road to block.");
+        return false;
+    }
+
+    if (pairInList(a, b)) {
+        toast("That road is already in the closure list.");
+        return false;
+    }
+
+    activeBlocks.push([a, b]);
+    renderBlockList();
+    updateClosureStat();
+    return true;
+}
+
+function addBlockClick() {
+    if (addBlock() === true) {
+        toast("Road added to closure. Add more or recalculate.", "success");
+    }
+}
+
+function removeBlock(index) {
+    activeBlocks.splice(index, 1);
+    renderBlockList();
+    updateClosureStat();
+}
+
+function clearBlocks() {
+    activeBlocks = [];
+    renderBlockList();
+    updateClosureStat();
+}
+
 async function blockAndReroute() {
     const source = $("source").value;
     const destination = $("destination").value;
-    const a = $("roadStart").value;
-    const b = $("roadEnd").value;
 
     if (source === destination) {
         showError("Choose different source and destination.");
         return;
     }
-    if (b === "" || a === b) {
-        showError("Choose a valid road to block.");
-        return;
+
+    if (activeBlocks.length === 0) {
+        if (addBlock() === false) {
+            return;
+        }
     }
 
     const btn = $("reroute");
@@ -393,12 +478,9 @@ async function blockAndReroute() {
     try {
         const data = await request(
             `/api/route?source=${source}&destination=${destination}` +
-            `&blockA=${a}&blockB=${b}`
+            `&blocks=${blocksQuery()}`
         );
 
-        activeBlock = [Number(a), Number(b)];
-        $("closureStat").textContent = `${nameOf(a)} → ${nameOf(b)}`;
-        $("closureStat").style.color = "#ef5350";
         renderRoute(data, true);
     } catch (error) {
         showError(error.message);
@@ -408,7 +490,7 @@ async function blockAndReroute() {
 }
 
 function resetClosure() {
-    activeBlock = null;
+    clearBlocks();
     findRoute();
 }
 
@@ -657,10 +739,7 @@ async function dispatchAmbulance() {
         autoHospital: $("autoHospital").checked
     };
 
-    if (activeBlock !== null) {
-        payload.blockA = activeBlock[0];
-        payload.blockB = activeBlock[1];
-    }
+    payload.blocks = activeBlocks;
 
     const btn = $("dispatchBtn");
     setLoading(btn, true, "Dispatching...");
@@ -752,6 +831,7 @@ on("findRoute", "click", findRoute);
 on("nearest", "click", nearestHospital);
 on("reroute", "click", blockAndReroute);
 on("reset", "click", resetClosure);
+on("addBlock", "click", addBlockClick);
 on("roadStart", "change", refreshNeighbors);
 on("dispatchBtn", "click", dispatchAmbulance);
 on("clearLog", "click", clearLog);

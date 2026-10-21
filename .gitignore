@@ -3,3 +3,13 @@
 
 # Executable files
 *.exe
+data/dispatches.json
+data/ambulance_status.json
+scratch/
+*.o
+*.exe
+data/dispatches.json
+data/ambulance_status.json
+scratch/
+testdata/
+__pycache__/
