@@ -1,378 +1,35 @@
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
-from pathlib import Path
 from datetime import datetime
-import subprocess
-import threading
 import json
-import csv
 
-ROOT = Path(__file__).resolve().parent.parent
-GUI = ROOT / "gui"
-EXE = ROOT / "routing_cli.exe"
-LOCATIONS = ROOT / "data" / "locations.csv"
-ROADS = ROOT / "data" / "roads.csv"
-AMBULANCES = ROOT / "data" / "ambulances.csv"
-HOSPITALS = ROOT / "data" / "hospitals.csv"
-COORDS = ROOT / "data" / "coordinates.csv"
-DISPATCHES = ROOT / "data" / "dispatches.json"
-FLEET_STATE = ROOT / "data" / "ambulance_status.json"
+from config import GUI
+from routing import (
+    read_locations, read_roads, read_coordinates,
+    normalize_blocks, parse_blocks_text, run_route
+)
+from hospitals import read_hospitals, find_best_hospital
+from dispatch_engine import (
+    fleet_with_status, read_dispatches,
+    create_dispatch, complete_dispatch, clear_dispatches
+)
+from export import filter_dispatches, export_rows, build_csv, build_pdf
 
-LOCK = threading.Lock()
-SEVERITIES = ["Critical", "Serious", "Stable"]
-AVG_SPEED_KMH = 30
-
-CONDITION_NEEDS = {
-    "Cardiac Arrest": "Cardiac",
-    "Road Accident": "Trauma",
-    "Stroke": "ICU",
-    "Burns": "BurnSupport",
-    "Breathing Difficulty": "Oxygen",
-    "Pregnancy / Delivery": "Maternity",
-    "Child Emergency": "Pediatric",
-    "Other": "Oxygen"
+# Simple GET endpoints that just return a function's result as JSON
+SIMPLE_GET = {
+    "/api/locations": read_locations,
+    "/api/roads": read_roads,
+    "/api/coordinates": read_coordinates,
+    "/api/hospitals": read_hospitals,
+    "/api/ambulances": fleet_with_status,
 }
 
-CONDITION_FACILITY = {
-    "Cardiac Arrest": "Cardiology",
-    "Road Accident": "Trauma",
-    "Stroke": "ICU",
-    "Burns": "BurnUnit",
-    "Breathing Difficulty": "ICU",
-    "Pregnancy / Delivery": "Maternity",
-    "Child Emergency": "Pediatrics",
-    "Other": "Emergency"
-}
-
-
-# ---------- Data readers ----------
-
-def read_locations():
-    with LOCATIONS.open(encoding="utf-8-sig", newline="") as f:
-        return [
-            {"id": int(row["location_id"]), "name": row["name"]}
-            for row in csv.DictReader(f)
-        ]
-
-
-def read_roads():
-    with ROADS.open(encoding="utf-8-sig", newline="") as f:
-        return [
-            {
-                "source": int(row["source"]),
-                "destination": int(row["destination"]),
-                "distance": float(row["distance"])
-            }
-            for row in csv.DictReader(f)
-        ]
-
-
-def read_coordinates():
-    # Used later by the map feature (data/coordinates.csv)
-    with COORDS.open(encoding="utf-8-sig", newline="") as f:
-        return [
-            {
-                "id": int(row["location_id"]),
-                "lat": float(row["lat"]),
-                "lng": float(row["lng"])
-            }
-            for row in csv.DictReader(f)
-        ]
-
-
-def road_exists(a, b):
-    for road in read_roads():
-        x = road["source"]
-        y = road["destination"]
-        if (x == a and y == b) or (x == b and y == a):
-            return True
-    return False
-
-
-def normalize_blocks(raw_pairs, valid_ids):
-    blocks = []
-    seen = set()
-
-    for pair in raw_pairs:
-        a = int(pair[0])
-        b = int(pair[1])
-
-        if a not in valid_ids or b not in valid_ids:
-            raise ValueError("Invalid blocked road locations")
-        if a == b:
-            raise ValueError("Blocked road needs two different locations")
-        if not road_exists(a, b):
-            raise ValueError("Selected road does not exist")
-
-        key = (min(a, b), max(a, b))
-        if key in seen:
-            continue
-
-        seen.add(key)
-        blocks.append((a, b))
-
-    return blocks
-
-
-def parse_blocks_text(text):
-    pairs = []
-
-    for part in text.split(","):
-        part = part.strip()
-        if part == "":
-            continue
-
-        pieces = part.split("-")
-        if len(pieces) != 2:
-            raise ValueError("Invalid blocked road list")
-
-        pairs.append((int(pieces[0]), int(pieces[1])))
-
-    return pairs
-
-
-# ---------- Hospitals ----------
-
-def split_list(text):
-    items = []
-    for part in text.split(";"):
-        part = part.strip()
-        if part != "":
-            items.append(part)
-    return items
-
-
-def read_hospitals():
-    with HOSPITALS.open(encoding="utf-8-sig", newline="") as f:
-        hospitals = []
-        for row in csv.DictReader(f):
-            hospitals.append({
-                "id": int(row["hospital_id"]),
-                "name": row["name"].strip(),
-                "location": int(row["location_id"]),
-                "status": row["status"].strip().upper(),
-                "facilities": split_list(row["facilities"])
-            })
-        return hospitals
-
-
-def available_hospitals():
-    result = []
-    for hospital in read_hospitals():
-        if hospital["status"] == "AVAILABLE":
-            result.append(hospital)
-    return result
-
-
-def nearest_in_pool(pool, source, blocks):
-    best_hospital = None
-    best_route = None
-
-    for hospital in pool:
-        if hospital["location"] == source:
-            continue
-
-        route = run_route(source, hospital["location"], blocks)
-
-        if not route["found"]:
-            continue
-
-        if best_route is None or route["distance"] < best_route["distance"]:
-            best_hospital = hospital
-            best_route = route
-
-    return best_hospital, best_route
-
-
-def find_best_hospital(source, condition, blocks=None):
-    need = CONDITION_FACILITY.get(condition, "Emergency")
-
-    available = available_hospitals()
-    if len(available) == 0:
-        raise ValueError("No hospital is available right now")
-
-    matching = []
-    for hospital in available:
-        if need in hospital["facilities"]:
-            matching.append(hospital)
-
-    matched = True
-    best_hospital = None
-    best_route = None
-
-    if len(matching) > 0:
-        best_hospital, best_route = nearest_in_pool(
-            matching, source, blocks
-        )
-
-    if best_hospital is None:
-        matched = False
-        best_hospital, best_route = nearest_in_pool(
-            available, source, blocks
-        )
-
-    if best_hospital is None:
-        raise ValueError("No hospital reachable from here")
-
-    return best_hospital, best_route, matched, need
-
-
-# ---------- Ambulance fleet ----------
-
-def read_ambulances():
-    with AMBULANCES.open(encoding="utf-8-sig", newline="") as f:
-        fleet = []
-        for row in csv.DictReader(f):
-            fleet.append({
-                "id": int(row["ambulance_id"]),
-                "location": int(row["location_id"]),
-                "baseStatus": row["status"].strip().upper(),
-                "type": row["type"].strip(),
-                "capabilities": split_list(row["capabilities"])
-            })
-        return fleet
-
-
-def read_busy():
-    if not FLEET_STATE.exists():
-        return {}
-    try:
-        with FLEET_STATE.open(encoding="utf-8") as f:
-            return json.load(f)
-    except ValueError:
-        return {}
-
-
-def save_busy(busy):
-    with FLEET_STATE.open("w", encoding="utf-8") as f:
-        json.dump(busy, f, indent=2)
-
-
-def fleet_with_status():
-    busy = read_busy()
-    fleet = read_ambulances()
-
-    for amb in fleet:
-        if amb["baseStatus"] != "AVAILABLE":
-            amb["status"] = "UNAVAILABLE"
-        elif str(amb["id"]) in busy:
-            amb["status"] = "BUSY"
-        else:
-            amb["status"] = "AVAILABLE"
-
-    return fleet
-
-
-def pick_ambulance(source, condition, blocks):
-    need = CONDITION_NEEDS.get(condition, "Oxygen")
-
-    free = []
-    for amb in fleet_with_status():
-        if amb["status"] == "AVAILABLE":
-            free.append(amb)
-
-    if len(free) == 0:
-        raise ValueError("No ambulance is available right now")
-
-    matching = []
-    for amb in free:
-        if need in amb["capabilities"]:
-            matching.append(amb)
-
-    matched = len(matching) > 0
-    pool = matching if matched else free
-
-    best_amb = None
-    best_leg = None
-
-    for amb in pool:
-        if amb["location"] == source:
-            leg = {
-                "found": True,
-                "distance": 0.0,
-                "originalDistance": None,
-                "path": [source]
-            }
-        else:
-            leg = run_route(amb["location"], source, blocks)
-
-        if not leg["found"]:
-            continue
-
-        if best_leg is None or leg["distance"] < best_leg["distance"]:
-            best_amb = amb
-            best_leg = leg
-
-    if best_amb is None:
-        raise ValueError("No ambulance can reach the patient")
-
-    return best_amb, best_leg, matched, need
-
-
-# ---------- Dispatch storage ----------
-
-def read_dispatches():
-    if not DISPATCHES.exists():
-        return []
-    try:
-        with DISPATCHES.open(encoding="utf-8") as f:
-            return json.load(f)
-    except ValueError:
-        return []
-
-
-def save_dispatches(items):
-    with DISPATCHES.open("w", encoding="utf-8") as f:
-        json.dump(items, f, indent=2)
-
-
-# ---------- Routing ----------
-
-def run_route(source, destination, blocks=None):
-    args = [str(EXE), str(source), str(destination)]
-
-    if blocks is not None:
-        for pair in blocks:
-            args.append(str(pair[0]))
-            args.append(str(pair[1]))
-
-    result = subprocess.run(
-        args,
-        cwd=str(ROOT),
-        capture_output=True,
-        text=True,
-        timeout=10
-    )
-
-    if result.returncode != 0:
-        raise ValueError(result.stderr.strip() or "Routing failed")
-
-    parts = result.stdout.strip().split()
-    if len(parts) < 4:
-        raise ValueError("Invalid routing output")
-
-    found = parts[0] == "1"
-    distance = float(parts[1])
-    original = float(parts[2])
-    count = int(parts[3])
-    path = [int(x) for x in parts[4:]]
-
-    if count != len(path):
-        raise ValueError("Invalid route path")
-
-    return {
-        "found": found,
-        "distance": distance if found else None,
-        "originalDistance": original if original >= 0 else None,
-        "path": path
-    }
-
-
-# ---------- HTTP handler ----------
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(GUI), **kwargs)
+
+    # ---------- helpers ----------
 
     def send_json(self, data, status=200):
         body = json.dumps(data).encode("utf-8")
@@ -381,6 +38,55 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def send_download(self, body, mimetype, filename):
+        self.send_response(200)
+        self.send_header("Content-Type", mimetype)
+        self.send_header(
+            "Content-Disposition", 'attachment; filename="%s"' % filename
+        )
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def handle_export(self, parsed):
+        params = parse_qs(parsed.query)
+        fmt = parsed.path.rsplit("/", 1)[-1]
+
+        items = filter_dispatches(read_dispatches(), params)
+        items.reverse()  # newest first, like the dashboard
+
+        if len(items) == 0:
+            self.send_json({"error": "No dispatches to export"}, 404)
+            return
+
+        rows = export_rows(items)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M")
+
+        if fmt == "csv":
+            self.send_download(
+                build_csv(rows), "text/csv; charset=utf-8",
+                "dispatch_log_%s.csv" % stamp
+            )
+            return
+
+        filters = ", ".join(
+            "%s=%s" % (k, v[0]) for k, v in params.items() if v and v[0]
+        ) or "none"
+
+        try:
+            pdf_bytes = build_pdf(rows, items, filters)
+        except ImportError:
+            self.send_json(
+                {"error": "PDF export needs fpdf2: pip install fpdf2"}, 501
+            )
+            return
+
+        self.send_download(
+            pdf_bytes, "application/pdf", "dispatch_log_%s.pdf" % stamp
+        )
+
+    # ---------- POST ----------
 
     def do_POST(self):
         parsed = urlparse(self.path)
@@ -391,186 +97,46 @@ class Handler(SimpleHTTPRequestHandler):
             body = json.loads(raw)
 
             if parsed.path == "/api/dispatches/clear":
-                with LOCK:
-                    save_dispatches([])
-                    save_busy({})
+                clear_dispatches()
                 self.send_json({"cleared": True})
                 return
 
             if parsed.path == "/api/dispatches/complete":
-                dispatch_id = int(body.get("id"))
-
-                with LOCK:
-                    items = read_dispatches()
-                    target = None
-
-                    for item in items:
-                        if item.get("id") == dispatch_id:
-                            target = item
-                            break
-
-                    if target is None:
-                        raise ValueError("Dispatch not found")
-                    if target.get("status") == "Completed":
-                        raise ValueError("Dispatch already completed")
-
-                    target["status"] = "Completed"
-                    save_dispatches(items)
-
-                    busy = read_busy()
-                    key = str(target.get("ambulanceId"))
-                    if key in busy:
-                        del busy[key]
-                        save_busy(busy)
-
-                self.send_json(target)
+                self.send_json(complete_dispatch(int(body.get("id"))))
                 return
 
-            if parsed.path != "/api/dispatch":
-                self.send_json({"error": "Not found"}, 404)
+            if parsed.path == "/api/dispatch":
+                self.send_json(create_dispatch(body), 201)
                 return
 
-            name = str(body.get("name", "")).strip()
-            condition = str(body.get("condition", "")).strip()
-            severity = str(body.get("severity", "")).strip()
-            age = int(body.get("age"))
-            source = int(body.get("source"))
-
-            if name == "":
-                raise ValueError("Patient name is required")
-            if age < 0 or age > 120:
-                raise ValueError("Enter a valid age")
-            if severity not in SEVERITIES:
-                raise ValueError("Invalid severity")
-            if condition == "":
-                raise ValueError("Condition is required")
-
-            valid_ids = {x["id"] for x in read_locations()}
-            if source not in valid_ids:
-                raise ValueError("Invalid pickup location")
-
-            blocks = normalize_blocks(body.get("blocks") or [], valid_ids)
-
-            hospital_name = ""
-            hospital_need = CONDITION_FACILITY.get(condition, "Emergency")
-            hospital_matched = True
-
-            if body.get("autoHospital"):
-                hospital, route, hospital_matched, hospital_need = (
-                    find_best_hospital(
-                        source, condition, blocks
-                    )
-                )
-                destination = hospital["location"]
-                hospital_name = hospital["name"]
-            else:
-                destination = int(body.get("destination"))
-                if destination not in valid_ids:
-                    raise ValueError("Invalid destination")
-                if destination == source:
-                    raise ValueError("Pickup and hospital must differ")
-
-                route = run_route(source, destination, blocks)
-
-                hospital_matched = False
-                for hospital in read_hospitals():
-                    if hospital["location"] == destination:
-                        hospital_name = hospital["name"]
-                        if hospital_need in hospital["facilities"]:
-                            hospital_matched = True
-
-            if not route["found"]:
-                raise ValueError("No route available for this dispatch")
-
-            with LOCK:
-                amb, leg, matched, need = pick_ambulance(
-                    source, condition, blocks
-                )
-
-                total = leg["distance"] + route["distance"]
-                eta = max(1, round(total / AVG_SPEED_KMH * 60))
-
-                items = read_dispatches()
-                record = {
-                    "id": len(items) + 1,
-                    "time": datetime.now().strftime("%d %b %H:%M:%S"),
-                    "name": name,
-                    "age": age,
-                    "condition": condition,
-                    "severity": severity,
-                    "source": source,
-                    "destination": destination,
-                    "hospitalName": hospital_name,
-                    "hospitalNeeded": hospital_need,
-                    "hospitalMatched": hospital_matched,
-                    "path": route["path"],
-                    "distance": route["distance"],
-                    "ambulanceId": amb["id"],
-                    "ambulanceType": amb["type"],
-                    "ambulanceFrom": amb["location"],
-                    "pickupPath": leg["path"],
-                    "pickupDistance": leg["distance"],
-                    "totalDistance": total,
-                    "needed": need,
-                    "matched": matched,
-                    "eta": eta,
-                    "rerouted": len(blocks) > 0,
-                    "blocked": [list(p) for p in blocks],
-                    "status": "En Route"
-                }
-                items.append(record)
-                save_dispatches(items)
-
-                busy = read_busy()
-                busy[str(amb["id"])] = record["id"]
-                save_busy(busy)
-
-            self.send_json(record, 201)
+            self.send_json({"error": "Not found"}, 404)
 
         except (ValueError, TypeError, KeyError) as e:
             self.send_json({"error": str(e)}, 400)
         except Exception as e:
             self.send_json({"error": str(e)}, 500)
 
+    # ---------- GET ----------
+
     def do_GET(self):
         parsed = urlparse(self.path)
+        path = parsed.path
 
-        if parsed.path == "/api/locations":
+        if path in ("/api/export/csv", "/api/export/pdf"):
             try:
-                self.send_json(read_locations())
+                self.handle_export(parsed)
             except Exception as e:
                 self.send_json({"error": str(e)}, 500)
             return
 
-        if parsed.path == "/api/roads":
+        if path in SIMPLE_GET:
             try:
-                self.send_json(read_roads())
+                self.send_json(SIMPLE_GET[path]())
             except Exception as e:
                 self.send_json({"error": str(e)}, 500)
             return
 
-        if parsed.path == "/api/coordinates":
-            try:
-                self.send_json(read_coordinates())
-            except Exception as e:
-                self.send_json({"error": str(e)}, 500)
-            return
-
-        if parsed.path == "/api/hospitals":
-            try:
-                self.send_json(read_hospitals())
-            except Exception as e:
-                self.send_json({"error": str(e)}, 500)
-            return
-
-        if parsed.path == "/api/ambulances":
-            try:
-                self.send_json(fleet_with_status())
-            except Exception as e:
-                self.send_json({"error": str(e)}, 500)
-            return
-
-        if parsed.path == "/api/dispatches":
+        if path == "/api/dispatches":
             try:
                 items = read_dispatches()
                 items.reverse()
@@ -579,7 +145,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json({"error": str(e)}, 500)
             return
 
-        if parsed.path == "/api/nearest-hospital":
+        if path == "/api/nearest-hospital":
             try:
                 params = parse_qs(parsed.query)
                 source = int(params["source"][0])
@@ -606,7 +172,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json({"error": str(e)}, 500)
             return
 
-        if parsed.path == "/api/route":
+        if path == "/api/route":
             try:
                 params = parse_qs(parsed.query)
 
