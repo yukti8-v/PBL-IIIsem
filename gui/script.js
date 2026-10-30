@@ -899,3 +899,80 @@ on("condition", "change", highlightHospitals);
 
 setupSidebar();
 loadLocations();
+// In-memory patient queue tracking
+let patientQueue = [
+  { id: 1, name: "Aarav Sharma", condition: "Cardiac Arrest", secondsLeft: 3500, hr: 110, spo2: 95, escalated: false },
+  { id: 2, name: "Pooja Verma", condition: "Severe Trauma", secondsLeft: 1200, hr: 125, spo2: 91, escalated: false },
+  { id: 3, name: "Rohan Gupta", condition: "Stroke", secondsLeft: 450, hr: 142, spo2: 86, escalated: false }
+];
+
+function renderQueue() {
+  const container = document.getElementById("patientQueue");
+  if (!container) return;
+
+  container.innerHTML = patientQueue.map(p => {
+    let statusClass = "countdown-green";
+    if (p.secondsLeft <= 600) {
+      statusClass = "countdown-red";
+    } else if (p.secondsLeft <= 1800) {
+      statusClass = "countdown-amber";
+    }
+
+    const mins = Math.floor(p.secondsLeft / 60);
+    const secs = p.secondsLeft % 60;
+    const timeDisplay = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+
+    return `
+      <div class="queue-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#fff;">${p.name}</strong>
+          <span class="countdown-badge ${statusClass}">⏳ ${timeDisplay}</span>
+        </div>
+        <div style="font-size:12px; color:#888;">Condition: ${p.condition}</div>
+        <div class="vitals-box">
+          <span>HR: <strong style="color:${p.hr > 130 ? '#ef4444' : '#fff'};">${p.hr} bpm</strong></span>
+          <span>SpO₂: <strong style="color:${p.spo2 < 90 ? '#ef4444' : '#fff'};">${p.spo2}%</strong></span>
+          <span>Escalated: <strong>${p.escalated ? "🚨 YES" : "No"}</strong></span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Background simulation ticker
+setInterval(() => {
+  patientQueue.forEach(p => {
+    if (p.secondsLeft > 0) {
+      p.secondsLeft -= 1;
+    }
+
+    // Degrade vitals slowly over time
+    if (Math.random() < 0.25) {
+      p.hr = Math.min(180, p.hr + 1);
+      p.spo2 = Math.max(70, p.spo2 - 1);
+    }
+
+    // Call escalation endpoint if timer hits critical or vitals crash
+    if (!p.escalated && (p.secondsLeft <= 600 || p.spo2 < 88)) {
+      p.escalated = true;
+      triggerEscalation(p);
+    }
+  });
+
+  renderQueue();
+}, 1000);
+
+async function triggerEscalation(patient) {
+  try {
+    await fetch("/api/escalate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patientId: patient.id, name: patient.name, condition: patient.condition })
+    });
+  } catch (err) {
+    console.log("Escalation triggered for:", patient.name);
+  }
+}
+
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", renderQueue);

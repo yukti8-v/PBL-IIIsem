@@ -19,6 +19,7 @@
             <a href="#fleet">🚑 Ambulance Fleet</a>
             <a href="#hospitals">🏥 Hospitals</a>
             <a href="#dispatch">🧑‍⚕️ Patient Dispatch</a>
+            <a href="#queue">⏱️ Queue & Vitals</a>
             <a href="#log">📋 Dispatch Log</a>
         </nav>
         <div class="sidebar-bottom">
@@ -187,7 +188,13 @@
                 🚑 Dispatch Ambulance
             </button>
         </section>
-
+        <section class="panel" id="queue">
+  <h2>⏱️ Patient Queue & Golden-Hour Monitor</h2>
+  <p>Live countdown and patient vitals tracking. Alerts escalate automatically when critical thresholds are reached.</p>
+  <div id="patientQueue" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px;">
+    <!-- Patient cards will be injected dynamically -->
+  </div>
+</section>
         <section class="panel" id="log">
             <h2>📋 Dispatch Log</h2>
             <div class="table-wrap">

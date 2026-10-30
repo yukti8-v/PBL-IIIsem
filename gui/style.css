@@ -594,3 +594,58 @@ button.chip-x:hover {
 .fill-icu {
   background: #f43f5e; /* Red */
 }
+/* Golden Hour Queue Panel */
+.queue-card {
+  background: #1c1c20;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.countdown-badge {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  text-align: center;
+}
+
+/* Green: Safe Window (> 30 mins) */
+.countdown-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+/* Amber: Warning Window (10 - 30 mins) */
+.countdown-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+/* Red: Critical Window (< 10 mins or expired) */
+.countdown-red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  animation: pulse-red 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.vitals-box {
+  background: #141416;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
