@@ -109,6 +109,10 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(create_dispatch(body), 201)
                 return
 
+            if parsed.path == "/api/escalate":
+                self.send_json({"status": "escalated", "message": "High-priority alert dispatched to emergency response."})
+                return
+
             self.send_json({"error": "Not found"}, 404)
 
         except (ValueError, TypeError, KeyError) as e:

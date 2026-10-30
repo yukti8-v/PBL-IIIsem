@@ -354,18 +354,23 @@ async function nearestHospital() {
     setLoading(btn, true, "Searching...");
 
     try {
-        const data = await request(
-            `/api/nearest-hospital?source=${source}`
-        );
+    const data = await request(
+      `/api/nearest-hospital?source=${source}`
+    );
 
-        $("destination").value = data.hospitalId;
-        clearBlocks();
-        renderRoute(data, false);
-    } catch (error) {
-        showError(error.message);
-    } finally {
-        setLoading(btn, false);
+    $("destination").value = data.hospitalId;
+    clearBlocks();
+    renderRoute(data, false);
+
+    // Member 4: Highlight the best match card and show the badge
+    if (typeof setBestMatchHospital === "function") {
+      setBestMatchHospital(data.hospitalId);
     }
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    setLoading(btn, false);
+  }
 }
 
 /* ---------- Road closures (one or many roads) ---------- */
@@ -563,49 +568,104 @@ function highlightHospitals() {
 }
 
 function renderHospitals(hospitals) {
-    const grid = $("hospitalGrid");
-    grid.replaceChildren();
+  const grid = $("hospitalGrid");
+  grid.replaceChildren();
 
-    let openCount = 0;
+  let openCount = 0;
 
-    hospitals.forEach(hospital => {
-        if (hospital.status === "AVAILABLE") {
-            openCount = openCount + 1;
-        }
+  hospitals.forEach(hospital => {
+    if (hospital.status === "AVAILABLE") {
+      openCount = openCount + 1;
+    }
 
-        const card = document.createElement("div");
-        card.className = "amb";
-        card.dataset.status = hospital.status;
-        card.dataset.facilities = hospital.facilities.join(";");
+    const card = document.createElement("div");
+    card.className = "amb hospital-card";
+    card.dataset.status = hospital.status;
+    card.dataset.hospitalId = hospital.id;
+    card.dataset.locationId = hospital.location;
+    card.dataset.facilities = (hospital.facilities || []).join(";");
 
-        const title = document.createElement("h4");
-        title.textContent = hospital.name;
-        card.appendChild(title);
+    // "Best match" badge placeholder
+    const bestPill = document.createElement("span");
+    bestPill.className = "best-match-pill";
+    bestPill.style.display = "none";
+    bestPill.textContent = "★ Best Match";
+    card.appendChild(bestPill);
 
-        const sub = document.createElement("small");
-        sub.textContent = `at ${nameOf(hospital.location)}`;
-        card.appendChild(sub);
+    const title = document.createElement("h4");
+    title.textContent = hospital.name;
+    card.appendChild(title);
 
-        const badge = document.createElement("span");
-        badge.className = `amb-status st-${hospital.status}`;
-        badge.textContent = hospital.status;
-        card.appendChild(badge);
+    const sub = document.createElement("small");
+    sub.textContent = `at ${nameOf(hospital.location)}`;
+    card.appendChild(sub);
 
-        const caps = document.createElement("div");
-        caps.className = "caps";
-        hospital.facilities.forEach(facility => {
-            const c = document.createElement("span");
-            c.className = "cap";
-            c.textContent = facility;
-            caps.appendChild(c);
-        });
-        card.appendChild(caps);
+    const badge = document.createElement("span");
+    badge.className = `amb-status st-${hospital.status}`;
+    badge.textContent = hospital.status;
+    card.appendChild(badge);
 
-        grid.appendChild(card);
+    // Bed & ICU calculations
+    const totalBeds = hospital.total_beds || (hospital.beds ? hospital.beds + 10 : 40);
+    const availBeds = hospital.beds ?? 0;
+    const bedPct = Math.min(100, Math.round((availBeds / totalBeds) * 100));
+
+    const totalIcu = hospital.total_icu || (hospital.icu ? hospital.icu + 4 : 10);
+    const availIcu = hospital.icu ?? 0;
+    const icuPct = Math.min(100, Math.round((availIcu / totalIcu) * 100));
+
+    // Progress Bars Container
+    const barsContainer = document.createElement("div");
+    barsContainer.style.cssText = "display: flex; flex-direction: column; gap: 8px; margin: 10px 0;";
+    barsContainer.innerHTML = `
+      <div class="progress-group">
+        <div class="progress-header" style="display:flex; justify-content:space-between; font-size:11px; color:#aaa;">
+          <span>Beds</span>
+          <span><strong>${availBeds}</strong>/${totalBeds} (${bedPct}%)</span>
+        </div>
+        <div class="progress-bg" style="background:#2b2b30; height:6px; border-radius:3px; overflow:hidden;">
+          <div class="progress-bar-fill fill-bed" style="width:${bedPct}%; height:100%; background:#38bdf8;"></div>
+        </div>
+      </div>
+      <div class="progress-group">
+        <div class="progress-header" style="display:flex; justify-content:space-between; font-size:11px; color:#aaa;">
+          <span>ICU</span>
+          <span><strong>${availIcu}</strong>/${totalIcu} (${icuPct}%)</span>
+        </div>
+        <div class="progress-bg" style="background:#2b2b30; height:6px; border-radius:3px; overflow:hidden;">
+          <div class="progress-bar-fill fill-icu" style="width:${icuPct}%; height:100%; background:#f43f5e;"></div>
+        </div>
+      </div>
+    `;
+    card.appendChild(barsContainer);
+
+    const caps = document.createElement("div");
+    caps.className = "caps";
+    (hospital.facilities || []).forEach(facility => {
+      const c = document.createElement("span");
+      c.className = "cap";
+      c.textContent = facility;
+      caps.appendChild(c);
     });
+    card.appendChild(caps);
 
-    $("hospitalStat").textContent = `${openCount} / ${hospitals.length}`;
-    highlightHospitals();
+    grid.appendChild(card);
+  });
+
+  $("hospitalStat").textContent = `${openCount} / ${hospitals.length}`;
+  highlightHospitals();
+}
+function setBestMatchHospital(hospitalIdOrLocation) {
+  const cards = document.querySelectorAll("#hospitalGrid .hospital-card");
+  cards.forEach(card => {
+    const isMatch = (card.dataset.hospitalId == hospitalIdOrLocation || card.dataset.locationId == hospitalIdOrLocation);
+    card.classList.toggle("is-best-match", isMatch);
+    
+    const pill = card.querySelector(".best-match-pill");
+    if (pill) {
+      pill.style.display = isMatch ? "inline-block" : "none";
+    }
+  });
 }
 
 async function loadHospitals() {
@@ -839,3 +899,80 @@ on("condition", "change", highlightHospitals);
 
 setupSidebar();
 loadLocations();
+// In-memory patient queue tracking
+let patientQueue = [
+  { id: 1, name: "Aarav Sharma", condition: "Cardiac Arrest", secondsLeft: 3500, hr: 110, spo2: 95, escalated: false },
+  { id: 2, name: "Pooja Verma", condition: "Severe Trauma", secondsLeft: 1200, hr: 125, spo2: 91, escalated: false },
+  { id: 3, name: "Rohan Gupta", condition: "Stroke", secondsLeft: 450, hr: 142, spo2: 86, escalated: false }
+];
+
+function renderQueue() {
+  const container = document.getElementById("patientQueue");
+  if (!container) return;
+
+  container.innerHTML = patientQueue.map(p => {
+    let statusClass = "countdown-green";
+    if (p.secondsLeft <= 600) {
+      statusClass = "countdown-red";
+    } else if (p.secondsLeft <= 1800) {
+      statusClass = "countdown-amber";
+    }
+
+    const mins = Math.floor(p.secondsLeft / 60);
+    const secs = p.secondsLeft % 60;
+    const timeDisplay = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+
+    return `
+      <div class="queue-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#fff;">${p.name}</strong>
+          <span class="countdown-badge ${statusClass}">⏳ ${timeDisplay}</span>
+        </div>
+        <div style="font-size:12px; color:#888;">Condition: ${p.condition}</div>
+        <div class="vitals-box">
+          <span>HR: <strong style="color:${p.hr > 130 ? '#ef4444' : '#fff'};">${p.hr} bpm</strong></span>
+          <span>SpO₂: <strong style="color:${p.spo2 < 90 ? '#ef4444' : '#fff'};">${p.spo2}%</strong></span>
+          <span>Escalated: <strong>${p.escalated ? "🚨 YES" : "No"}</strong></span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Background simulation ticker
+setInterval(() => {
+  patientQueue.forEach(p => {
+    if (p.secondsLeft > 0) {
+      p.secondsLeft -= 1;
+    }
+
+    // Degrade vitals slowly over time
+    if (Math.random() < 0.25) {
+      p.hr = Math.min(180, p.hr + 1);
+      p.spo2 = Math.max(70, p.spo2 - 1);
+    }
+
+    // Call escalation endpoint if timer hits critical or vitals crash
+    if (!p.escalated && (p.secondsLeft <= 600 || p.spo2 < 88)) {
+      p.escalated = true;
+      triggerEscalation(p);
+    }
+  });
+
+  renderQueue();
+}, 1000);
+
+async function triggerEscalation(patient) {
+  try {
+    await fetch("/api/escalate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patientId: patient.id, name: patient.name, condition: patient.condition })
+    });
+  } catch (err) {
+    console.log("Escalation triggered for:", patient.name);
+  }
+}
+
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", renderQueue);
