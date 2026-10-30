@@ -528,3 +528,69 @@ button.chip-x:hover {
     box-shadow: none;
     background: rgba(239, 83, 80, 0.25);
 }
+/* --- Member 4: Hospital Cards, Progress Bars & Best Match Badge --- */
+/* Hospital Card with Progress Bars & Badge */
+.hospital-card {
+  position: relative;
+  background: #1f1f23;
+  border: 1px solid #333338;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hospital-card.is-best-match {
+  border: 2px solid #22c55e !important;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+}
+
+.best-match-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #22c55e;
+  color: #052e16;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.progress-bg {
+  width: 100%;
+  height: 8px;
+  background: #2e2e33;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.fill-bed {
+  background: #38bdf8; /* Blue */
+}
+
+.fill-icu {
+  background: #f43f5e; /* Red */
+}
