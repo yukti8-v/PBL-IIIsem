@@ -56,9 +56,9 @@ class Handler(SimpleHTTPRequestHandler):
         items = filter_dispatches(read_dispatches(), params)
         items.reverse()  # newest first, like the dashboard
 
-        if len(items) == 0:
+        '''if len(items) == 0:
             self.send_json({"error": "No dispatches to export"}, 404)
-            return
+            return'''
 
         rows = export_rows(items)
         stamp = datetime.now().strftime("%Y%m%d_%H%M")
