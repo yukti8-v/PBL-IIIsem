@@ -42,4 +42,4 @@ Status: Pass
 
 
 RESULT SUMMARY
-Tests run: 3   Passed: __   Failed: __
+Tests run: 3   Passed: 3   Failed: 3
