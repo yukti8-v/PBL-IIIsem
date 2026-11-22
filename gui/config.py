@@ -1,8 +1,12 @@
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GUI = ROOT / "gui"
-EXE = ROOT / "routing_cli.exe"
+if os.name == "nt":
+    EXE = ROOT / "routing_cli.exe"
+else:
+    EXE = ROOT / "routing_cli"
 
 LOCATIONS = ROOT / "data" / "locations.csv"
 ROADS = ROOT / "data" / "roads.csv"
