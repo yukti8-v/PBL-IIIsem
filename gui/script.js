@@ -100,6 +100,7 @@ async function loadLocations() {
     try {
         locations = await request("/api/locations");
         $("locationCount").textContent = locations.length;
+        if (window.RescueMap) window.RescueMap.setLocations(locations);
 
         for (const id of ["source", "destination", "roadStart"]) {
             const select = $(id);
@@ -137,6 +138,7 @@ async function loadLocations() {
 async function loadRoads() {
     try {
         roads = await request("/api/roads");
+        if (window.RescueMap) window.RescueMap.setRoads(roads);
     } catch (error) {
         showError("Cannot load roads: " + error.message);
     }
@@ -213,6 +215,17 @@ function buildMetric(label, value) {
 
 function renderRoute(data, blocked) {
     currentRoute = data;
+
+    if (window.RescueMap) {
+        if (data && data.found && Array.isArray(data.path)) {
+            window.RescueMap.drawRoute(data.path, {
+                color: blocked ? "#f2b94b" : "#55c7e8"
+            });
+        } else {
+            window.RescueMap.clearRoute();
+        }
+        window.RescueMap.setBlockedRoads(activeBlocks);
+    }
 
     if (!data.found) {
         showError("No route available.");
@@ -436,6 +449,7 @@ function addBlock() {
     activeBlocks.push([a, b]);
     renderBlockList();
     updateClosureStat();
+    if (window.RescueMap) window.RescueMap.setBlockedRoads(activeBlocks);
     return true;
 }
 
@@ -449,12 +463,14 @@ function removeBlock(index) {
     activeBlocks.splice(index, 1);
     renderBlockList();
     updateClosureStat();
+    if (window.RescueMap) window.RescueMap.setBlockedRoads(activeBlocks);
 }
 
 function clearBlocks() {
     activeBlocks = [];
     renderBlockList();
     updateClosureStat();
+    if (window.RescueMap) window.RescueMap.setBlockedRoads(activeBlocks);
 }
 
 async function blockAndReroute() {
@@ -543,6 +559,7 @@ async function loadFleet() {
     try {
         const fleet = await request("/api/ambulances");
         renderFleet(fleet);
+        if (window.RescueMap) window.RescueMap.updateAmbulances(fleet);
     } catch (error) {
         toast("Cannot load fleet: " + error.message);
     }
@@ -612,6 +629,7 @@ async function loadHospitals() {
     try {
         const hospitals = await request("/api/hospitals");
         renderHospitals(hospitals);
+        if (window.RescueMap) window.RescueMap.setHospitals(hospitals);
     } catch (error) {
         toast("Cannot load hospitals: " + error.message);
     }
@@ -716,6 +734,65 @@ async function loadDispatches() {
     }
 }
 
+let activeAnimations = new Map();
+
+function animationSpeed() {
+    const control = $("animationSpeed");
+    return control ? Number(control.value) || 1 : 1;
+}
+
+function updateAnimationMessage(text) {
+    const el = $("ambulanceEta");
+    if (el) el.textContent = text;
+}
+
+async function animateDispatchRecord(record) {
+    if (!window.RescueAnimation || !window.RescueMap || record.ambulanceId === undefined) {
+        return;
+    }
+
+    const marker = window.RescueMap.markerForAmbulance(record.ambulanceId);
+    if (!marker) {
+        updateAnimationMessage("Dispatch saved. Ambulance marker is unavailable; check coordinate data.");
+        return;
+    }
+
+    let pickupPath = Array.isArray(record.pickupPath) ? record.pickupPath : [];
+    const hospitalPath = Array.isArray(record.path) ? record.path : [];
+
+    // Older dispatch records may not save pickupPath. Ask the existing route API for it.
+    if (pickupPath.length === 0 && record.ambulanceFrom !== undefined && record.source !== undefined) {
+        try {
+            const pickup = await request(
+                `/api/route?source=${Number(record.ambulanceFrom)}&destination=${Number(record.source)}`
+            );
+            if (pickup.found && Array.isArray(pickup.path)) pickupPath = pickup.path;
+        } catch (error) {
+            console.warn("Could not calculate pickup animation path:", error.message);
+        }
+    }
+
+    const old = activeAnimations.get(String(record.ambulanceId));
+    if (old) old.cancel();
+
+    updateAnimationMessage(`Ambulance #${record.ambulanceId}: travelling to pickup, then hospital. Speed ${animationSpeed()}×.`);
+    const animation = window.RescueAnimation.animateDispatch({
+        pickupPath,
+        hospitalPath,
+        marker,
+        speed: animationSpeed(),
+        onLegChange: (leg, from, to) => {
+            const label = leg === "pickup" ? "Going to patient" : "Taking patient to hospital";
+            updateAnimationMessage(`Ambulance #${record.ambulanceId}: ${label} (${nameOf(from)} → ${nameOf(to)}).`);
+        },
+        onArrive: () => {
+            updateAnimationMessage(`Ambulance #${record.ambulanceId}: route animation finished. Mark the dispatch Complete when the emergency is resolved.`);
+            activeAnimations.delete(String(record.ambulanceId));
+        }
+    });
+    activeAnimations.set(String(record.ambulanceId), animation);
+}
+
 async function dispatchAmbulance() {
     const name = $("patientName").value.trim();
     const ageText = $("patientAge").value;
@@ -770,6 +847,7 @@ async function dispatchAmbulance() {
 
         await loadDispatches();
         await loadFleet();
+        animateDispatchRecord(record);
         toast(
             `Ambulance #${record.ambulanceId} dispatched. ` +
             `ETA ${record.eta} min.`,
