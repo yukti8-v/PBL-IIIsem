@@ -49,29 +49,34 @@ double shortestDistance(
 }
 
 
-/* Dijkstra algorithm + route reconstruction */
-int shortestPath(
+
+/* Dijkstra algorithm with node visit statistics */
+int shortestPathWithStats(
     const Graph *graph,
     int source,
     int destination,
     int path[],
     int *pathLength,
-    double *totalDistance)
+    double *totalDistance,
+    int *nodesVisited)
 {
+    if (nodesVisited != NULL)
+        *nodesVisited = 0;
+
     if (graph == NULL ||
         path == NULL ||
         pathLength == NULL ||
-        totalDistance == NULL)
+        totalDistance == NULL ||
+        nodesVisited == NULL)
     {
         return RESULT_INVALID_INPUT;
     }
 
     int n = graph->numberOfLocations;
 
-    if (source < 0 ||
-        destination < 0 ||
-        source >= n ||
-        destination >= n)
+    if (n <= 0 || n > MAX_LOCATIONS ||
+        source < 0 || destination < 0 ||
+        source >= n || destination >= n)
     {
         return RESULT_INVALID_INPUT;
     }
@@ -80,7 +85,6 @@ int shortestPath(
     int visited[MAX_LOCATIONS];
     int parent[MAX_LOCATIONS];
 
-    /* Initialisation */
     for (int i = 0; i < n; i++)
     {
         distance[i] = INF;
@@ -90,88 +94,92 @@ int shortestPath(
 
     distance[source] = 0.0;
 
-
     /* Main Dijkstra loop */
     for (int count = 0; count < n; count++)
     {
-        int current =
-            findMinimumDistance(
-                distance,
-                visited,
-                n
-            );
+        int current = findMinimumDistance(
+            distance,
+            visited,
+            n
+        );
 
         if (current == -1)
             break;
 
         visited[current] = 1;
 
+        /* Count each settled node exactly once */
+        (*nodesVisited)++;
+
         if (current == destination)
             break;
 
-
-        /* Check all neighbouring locations */
         for (int neighbour = 0;
              neighbour < n;
              neighbour++)
         {
             double edge =
-                graph->adjacencyMatrix
-                [current][neighbour];
+                graph->adjacencyMatrix[current][neighbour];
 
             if (!visited[neighbour] &&
                 edge != INF &&
                 distance[current] != INF)
             {
-                /*
-                 * RELAXATION STEP
-                 */
                 double newDistance =
                     distance[current] + edge;
 
                 if (newDistance < distance[neighbour])
                 {
-                    distance[neighbour] =
-                        newDistance;
-
-                    parent[neighbour] =
-                        current;
+                    distance[neighbour] = newDistance;
+                    parent[neighbour] = current;
                 }
             }
         }
     }
 
-
-    /* Destination cannot be reached */
     if (distance[destination] == INF)
-    {
         return RESULT_ROUTE_NOT_FOUND;
-    }
 
     *totalDistance = distance[destination];
 
-
-    /* Reconstruct shortest route */
     int reversePath[MAX_LOCATIONS];
     int count = 0;
-
     int current = destination;
 
-    while (current != -1)
+    while (current != -1 && count < MAX_LOCATIONS)
     {
         reversePath[count++] = current;
         current = parent[current];
     }
 
-
-    /* Reverse route */
     *pathLength = count;
 
     for (int i = 0; i < count; i++)
     {
-        path[i] =
-            reversePath[count - i - 1];
+        path[i] = reversePath[count - i - 1];
     }
 
     return RESULT_SUCCESS;
+}
+
+/* Original function retained for compatibility */
+int shortestPath(
+    const Graph *graph,
+    int source,
+    int destination,
+    int path[],
+    int *pathLength,
+    double *totalDistance)
+{
+    int nodesVisited = 0;
+
+    return shortestPathWithStats(
+        graph,
+        source,
+        destination,
+        path,
+        pathLength,
+        totalDistance,
+        &nodesVisited
+    );
 }
