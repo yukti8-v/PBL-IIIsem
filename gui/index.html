@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,17 +15,20 @@
 
 <body>
 <div class="layout">
+
+    <!-- Sidebar -->
     <aside class="sidebar">
         <h2>🚑 RescueRoute</h2>
         <p>Emergency Response System</p>
         <nav>
             <a href="#planner">🗺️ Route Planner</a>
-            <a href="#closure">🚧 Road Closure</a>
+            <a href="#liveMap">🌍 Live Map</a>
+            <a href="#closures">🚧 Road Closure</a>
             <a href="#results">📊 Route Results</a>
             <a href="#fleet">🚑 Ambulance Fleet</a>
             <a href="#hospitals">🏥 Hospitals</a>
             <a href="#dispatch">🧑‍⚕️ Patient Dispatch</a>
-            <a href="#queue">⏱️ Queue & Vitals</a>
+            <a href="#queue">⏱️ Queue &amp; Vitals</a>
             <a href="#log">📋 Dispatch Log</a>
         </nav>
         <div class="sidebar-bottom">
@@ -34,390 +36,374 @@
             Phase-II Prototype
         </div>
     </aside>
-    <div class="layout">
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-icon">R</div>
-                <div>
-                    <h2>RescueRoute</h2>
-                    <p>Emergency Response System</p>
-                </div>
-            </div>
+    <!-- Main content -->
+    <main class="main">
 
-            <nav aria-label="Main navigation">
-                <a href="#overview" class="active">⌂ Overview</a>
-                <a href="#planner">⌖ Route Planner</a>
-                <a href="#liveMap">🗺 Live Map</a>
-                <a href="#closures">⊘ Road Closures</a>
-                <a href="#results">↗ Route Results</a>
-                <a href="#fleet">🚑 Ambulance Fleet</a>
-                <a href="#hospitals">✚ Hospitals</a>
-                <a href="#dispatch">＋ New Dispatch</a>
-                <a href="#log">▤ Dispatch Log</a>
-            </nav>
-
-            <div class="sidebar-bottom">
-                <span class="online-dot"></span> System interface online
-                <p>RescueRoute · BTech Project</p>
-            </div>
-        </aside>
-
-        <!-- Main content -->
-        <main class="main">
-
-            <!-- Header -->
-            <header id="overview">
-                <div>
-                    <p class="eyebrow">EMERGENCY MANAGEMENT DASHBOARD</p>
-                    <h1>Emergency Response Center</h1>
-                    <p class="header-subtitle">
-                        Plan routes, manage road closures, and coordinate
-                        ambulance dispatches.
-                    </p>
-                </div>
-
-                <div class="status">
-                    <span class="online-dot"></span>
-                    System Online
-                </div>
-            </header>
-
-            <!-- Dashboard statistics -->
-            <section class="stats" aria-label="Dashboard statistics">
-                <article class="stat">
-                    <span>Total Locations</span>
-                    <strong id="locationCount">—</strong>
-                    <small>Mapped network nodes</small>
-                </article>
-
-                <article class="stat">
-                    <span>Available Ambulances</span>
-                    <strong id="fleetStat">—</strong>
-                    <small>Ready for dispatch</small>
-                </article>
-
-                <article class="stat">
-                    <span>Available Hospitals</span>
-                    <strong id="hospitalStat">—</strong>
-                    <small>Currently available</small>
-                </article>
-
-                <article class="stat">
-                    <span>Road Closures</span>
-                    <strong id="closureStat">None</strong>
-                    <small>Active blocked roads</small>
-                </article>
-            </section>
-
-            <!-- Route planner -->
-            <section class="panel" id="planner">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">NAVIGATION</p>
-                        <h2>Route Planner</h2>
-                        <p>
-                            Select a starting location and destination to
-                            calculate the shortest available route.
-                        </p>
-                    </div>
-                    <span class="section-icon">⌖</span>
-                </div>
-
-                <div class="fields">
-                    <div>
-                        <label for="source">Starting Location</label>
-                        <select id="source" required>
-                            <option value="">Loading locations...</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="destination">Destination</label>
-                        <select id="destination" required>
-                            <option value="">Loading locations...</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="button-row">
-                    <button type="button" id="findRoute">
-                        Find Shortest Route
-                    </button>
-
-                    <button type="button" id="nearest" class="secondary">
-                        Find Nearest Hospital
-                    </button>
-                </div>
-            </section>
-
-            <!-- Interactive map: Member 3 -->
-            <section class="panel map-panel" id="liveMap">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">LIVE VISUALIZATION</p>
-                        <h2>Interactive Route Map</h2>
-                        <p>
-                            View road connections, selected routes, hospitals,
-                            road closures, and ambulance positions.
-                        </p>
-                    </div>
-                    <span class="section-icon">🗺</span>
-                </div>
-
-                <div class="map-toolbar">
-                    <div class="speed-control">
-                        <label for="animationSpeed">Ambulance Speed</label>
-                        <select id="animationSpeed">
-                            <option value="1">1× Normal</option>
-                            <option value="5">5× Fast</option>
-                            <option value="10">10× Very Fast</option>
-                        </select>
-                    </div>
-
-                    <button type="button" id="recenterMap" class="secondary">
-                        Recenter Map
-                    </button>
-                </div>
-
-                <div id="map" aria-label="Interactive emergency route map"></div>
-
-                <div class="map-legend">
-                    <span>
-                        <i class="legend-dot route-dot"></i>
-                        Selected route
-                    </span>
-                    <span>
-                        <i class="legend-dot hospital-dot"></i>
-                        Hospital
-                    </span>
-                    <span>
-                        <i class="legend-dot ambulance-dot"></i>
-                        Ambulance
-                    </span>
-                    <span>
-                        <i class="legend-dot blocked-dot"></i>
-                        Blocked road
-                    </span>
-                </div>
-
-                <p id="mapMessage" class="map-message" aria-live="polite">
-                    Loading map and location data...
+        <!-- Header -->
+        <header id="overview">
+            <div>
+                <p class="eyebrow">EMERGENCY MANAGEMENT DASHBOARD</p>
+                <h1>Emergency Response Center</h1>
+                <p class="header-subtitle">
+                    Plan routes, manage road closures, and coordinate
+                    ambulance dispatches.
                 </p>
+            </div>
 
-                <p id="ambulanceEta" class="map-message" aria-live="polite"></p>
-            </section>
+            <div class="status">
+                <span class="online-dot"></span>
+                System Online
+            </div>
+        </header>
 
-            <!-- Road closures -->
-            <section class="panel" id="closures">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">NETWORK MANAGEMENT</p>
-                        <h2>Road Closures</h2>
-                        <p>
-                            Block one or more roads and recalculate the route
-                            to avoid them.
-                        </p>
-                    </div>
-                    <span class="section-icon">⊘</span>
-                </div>
+        <!-- Dashboard statistics -->
+        <section class="stats" aria-label="Dashboard statistics">
+            <article class="stat">
+                <span>Total Locations</span>
+                <strong id="locationCount">—</strong>
+                <small>Mapped network nodes</small>
+            </article>
 
-                <div class="fields">
-                    <div>
-                        <label for="roadStart">Road Starting Location</label>
-                        <select id="roadStart">
-                            <option value="">Loading locations...</option>
-                        </select>
-                    </div>
+            <article class="stat">
+                <span>Available Ambulances</span>
+                <strong id="fleetStat">—</strong>
+                <small>Ready for dispatch</small>
+            </article>
 
-                    <div>
-                        <label for="roadEnd">Connected Road</label>
-                        <select id="roadEnd">
-                            <option value="">Select a starting location first</option>
-                        </select>
-                    </div>
-                </div>
+            <article class="stat">
+                <span>Available Hospitals</span>
+                <strong id="hospitalStat">—</strong>
+                <small>Currently available</small>
+            </article>
 
-                <div class="button-row">
-                    <button type="button" id="addBlock" class="secondary">
-                        Add Road Closure
-                    </button>
+            <article class="stat">
+                <span>Road Closures</span>
+                <strong id="closureStat">None</strong>
+                <small>Active blocked roads</small>
+            </article>
+        </section>
 
-                    <button type="button" id="reroute">
-                        Recalculate Route
-                    </button>
-
-                    <button type="button" id="reset" class="danger">
-                        Reset Closures
-                    </button>
-                </div>
-
-                <div class="subsection">
-                    <h3>Active Closure List</h3>
-                    <div id="blockList" class="block-list">
-                        <p class="muted">No roads blocked.</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Route results -->
-            <section class="panel" id="results">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">ROUTE ANALYSIS</p>
-                        <h2>Route Results</h2>
-                        <p>
-                            Route details, distance, estimated time, and
-                            rerouting information.
-                        </p>
-                    </div>
-                    <span class="section-icon">↗</span>
-                </div>
-
-                <div class="result-stats">
-                    <div class="result-stat">
-                        <span>Route Distance</span>
-                        <strong id="distanceStat">—</strong>
-                    </div>
-
-                    <div class="result-stat">
-                        <span>Estimated Time</span>
-                        <strong id="etaStat">—</strong>
-                    </div>
-
-                    <div class="result-stat">
-                        <span>Route Status</span>
-                        <strong id="statusStat" class="badge-normal">Waiting</strong>
-                    </div>
-                </div>
-
-                <div id="result" class="result" aria-live="polite">
-                    <p class="muted">
-                        Select a source and destination, then click
-                        Find Shortest Route.
+        <!-- Route planner -->
+        <section class="panel" id="planner">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">NAVIGATION</p>
+                    <h2>Route Planner</h2>
+                    <p>
+                        Select a starting location and destination to
+                        calculate the shortest available route.
                     </p>
                 </div>
-            </section>
+                <span class="section-icon">⌖</span>
+            </div>
 
-            <!-- Ambulance fleet -->
-            <section class="panel" id="fleet">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">RESOURCE MANAGEMENT</p>
-                        <h2>Ambulance Fleet</h2>
-                        <p>
-                            Ambulance availability, current locations,
-                            and capabilities.
-                        </p>
-                    </div>
-                    <span class="section-icon">🚑</span>
+            <div class="fields">
+                <div>
+                    <label for="source">Starting Location</label>
+                    <select id="source" required>
+                        <option value="">Loading locations...</option>
+                    </select>
                 </div>
 
-                <div id="fleetGrid" class="fleet-grid">
-                    <p class="muted">Loading ambulance fleet...</p>
+                <div>
+                    <label for="destination">Destination</label>
+                    <select id="destination" required>
+                        <option value="">Loading locations...</option>
+                    </select>
                 </div>
-            </section>
+            </div>
 
-            <!-- Hospitals -->
-            <section class="panel" id="hospitals">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">HEALTHCARE NETWORK</p>
-                        <h2>Hospitals</h2>
-                        <p>
-                            Hospital locations, availability, and
-                            supported medical facilities.
-                        </p>
-                    </div>
-                    <span class="section-icon">✚</span>
-                </div>
+            <div class="button-row">
+                <button type="button" id="findRoute">
+                    Find Shortest Route
+                </button>
 
-                <div id="hospitalGrid" class="fleet-grid">
-                    <p class="muted">Loading hospitals...</p>
-                </div>
-            </section>
-
-            <!-- New dispatch -->
-            <section class="panel" id="dispatch">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">EMERGENCY RESPONSE</p>
-                        <h2>New Ambulance Dispatch</h2>
-                        <p>
-                            Enter patient information and assign an
-                            ambulance to the emergency.
-                        </p>
-                    </div>
-                    <span class="section-icon">＋</span>
-                </div>
-
-                <div class="fields">
-                    <div>
-                        <label for="patientName">Patient Name</label>
-                        <input
-                            type="text"
-                            id="patientName"
-                            placeholder="Enter patient name"
-                            autocomplete="off"
-                            required
-                        >
-                    </div>
-
-                    <div>
-                        <label for="patientAge">Patient Age</label>
-                        <input
-                            type="number"
-                            id="patientAge"
-                            min="0"
-                            max="120"
-                            placeholder="Enter age"
-                            required
-                        >
-                    </div>
-
-                    <div>
-                        <label for="condition">Emergency Condition</label>
-                        <select id="condition">
-                            <option value="Cardiac Arrest">Cardiac Arrest</option>
-                            <option value="Road Accident">Road Accident</option>
-                            <option value="Stroke">Stroke</option>
-                            <option value="Burns">Burns</option>
-                            <option value="Breathing Difficulty">Breathing Difficulty</option>
-                            <option value="Pregnancy / Delivery">Pregnancy / Delivery</option>
-                            <option value="Child Emergency">Child Emergency</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="severity">Emergency Severity</label>
-                        <select id="severity">
-                            <option value="Critical">Critical</option>
-                            <option value="Serious">Serious</option>
-                            <option value="Stable">Stable</option>
-                        </select>
-                    </div>
-                </div>
-
-                <label class="check" for="autoHospital">
-                    <input type="checkbox" id="autoHospital" checked>
-                    Automatically select the most suitable hospital
-                </label>
-
-            <button id="dispatchBtn" class="danger">
-                🚑 Dispatch Ambulance
-            </button>
+                <button type="button" id="nearest" class="secondary">
+                    Find Nearest Hospital
+                </button>
+            </div>
         </section>
+
+        <!-- Interactive map -->
+        <section class="panel map-panel" id="liveMap">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">LIVE VISUALIZATION</p>
+                    <h2>Interactive Route Map</h2>
+                    <p>
+                        View road connections, selected routes, hospitals,
+                        road closures, and ambulance positions.
+                    </p>
+                </div>
+                <span class="section-icon">🗺</span>
+            </div>
+
+            <div class="map-toolbar">
+                <div class="speed-control">
+                    <label for="animationSpeed">Ambulance Speed</label>
+                    <select id="animationSpeed">
+                        <option value="1">1× Normal</option>
+                        <option value="5">5× Fast</option>
+                        <option value="10">10× Very Fast</option>
+                    </select>
+                </div>
+
+                <button type="button" id="recenterMap" class="secondary">
+                    Recenter Map
+                </button>
+            </div>
+
+            <div id="map" aria-label="Interactive emergency route map"></div>
+
+            <div class="map-legend">
+                <span>
+                    <i class="legend-dot route-dot"></i>
+                    Selected route
+                </span>
+                <span>
+                    <i class="legend-dot hospital-dot"></i>
+                    Hospital
+                </span>
+                <span>
+                    <i class="legend-dot ambulance-dot"></i>
+                    Ambulance
+                </span>
+                <span>
+                    <i class="legend-dot blocked-dot"></i>
+                    Blocked road
+                </span>
+            </div>
+
+            <p id="mapMessage" class="map-message" aria-live="polite">
+                Loading map and location data...
+            </p>
+
+            <p id="ambulanceEta" class="map-message" aria-live="polite"></p>
+        </section>
+
+        <!-- Road closures -->
+        <section class="panel" id="closures">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">NETWORK MANAGEMENT</p>
+                    <h2>Road Closures</h2>
+                    <p>
+                        Block one or more roads and recalculate the route
+                        to avoid them.
+                    </p>
+                </div>
+                <span class="section-icon">⊘</span>
+            </div>
+
+            <div class="fields">
+                <div>
+                    <label for="roadStart">Road Starting Location</label>
+                    <select id="roadStart">
+                        <option value="">Loading locations...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="roadEnd">Connected Road</label>
+                    <select id="roadEnd">
+                        <option value="">Select a starting location first</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button type="button" id="addBlock" class="secondary">
+                    Add Road Closure
+                </button>
+
+                <button type="button" id="reroute">
+                    Recalculate Route
+                </button>
+
+                <button type="button" id="reset" class="danger">
+                    Reset Closures
+                </button>
+            </div>
+
+            <div class="subsection">
+                <h3>Active Closure List</h3>
+                <div id="blockList" class="block-list">
+                    <p class="muted">No roads blocked.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Route results -->
+        <section class="panel" id="results">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">ROUTE ANALYSIS</p>
+                    <h2>Route Results</h2>
+                    <p>
+                        Route details, distance, estimated time, and
+                        rerouting information.
+                    </p>
+                </div>
+                <span class="section-icon">↗</span>
+            </div>
+
+            <div class="result-stats">
+                <div class="result-stat">
+                    <span>Route Distance</span>
+                    <strong id="distanceStat">—</strong>
+                </div>
+
+                <div class="result-stat">
+                    <span>Estimated Time</span>
+                    <strong id="etaStat">—</strong>
+                </div>
+
+                <div class="result-stat">
+                    <span>Route Status</span>
+                    <strong id="statusStat" class="badge-normal">Waiting</strong>
+                </div>
+            </div>
+
+            <div id="result" class="result" aria-live="polite">
+                <p class="muted">
+                    Select a source and destination, then click
+                    Find Shortest Route.
+                </p>
+            </div>
+        </section>
+
+        <!-- Ambulance fleet -->
+        <section class="panel" id="fleet">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">RESOURCE MANAGEMENT</p>
+                    <h2>Ambulance Fleet</h2>
+                    <p>
+                        Ambulance availability, current locations,
+                        and capabilities.
+                    </p>
+                </div>
+                <span class="section-icon">🚑</span>
+            </div>
+
+            <div id="fleetGrid" class="fleet-grid">
+                <p class="muted">Loading ambulance fleet...</p>
+            </div>
+        </section>
+
+        <!-- Hospitals -->
+        <section class="panel" id="hospitals">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">HEALTHCARE NETWORK</p>
+                    <h2>Hospitals</h2>
+                    <p>
+                        Hospital locations, availability, and
+                        supported medical facilities.
+                    </p>
+                </div>
+                <span class="section-icon">✚</span>
+            </div>
+
+            <div id="hospitalGrid" class="fleet-grid">
+                <p class="muted">Loading hospitals...</p>
+            </div>
+        </section>
+
+        <!-- New dispatch -->
+        <section class="panel" id="dispatch">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">EMERGENCY RESPONSE</p>
+                    <h2>New Ambulance Dispatch</h2>
+                    <p>
+                        Enter patient information and assign an
+                        ambulance to the emergency.
+                    </p>
+                </div>
+                <span class="section-icon">＋</span>
+            </div>
+
+            <div class="fields">
+                <div>
+                    <label for="patientName">Patient Name</label>
+                    <input
+                        type="text"
+                        id="patientName"
+                        placeholder="Enter patient name"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="patientAge">Patient Age</label>
+                    <input
+                        type="number"
+                        id="patientAge"
+                        min="0"
+                        max="120"
+                        placeholder="Enter age"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="condition">Emergency Condition</label>
+                    <select id="condition">
+                        <option value="Cardiac Arrest">Cardiac Arrest</option>
+                        <option value="Road Accident">Road Accident</option>
+                        <option value="Stroke">Stroke</option>
+                        <option value="Burns">Burns</option>
+                        <option value="Breathing Difficulty">Breathing Difficulty</option>
+                        <option value="Pregnancy / Delivery">Pregnancy / Delivery</option>
+                        <option value="Child Emergency">Child Emergency</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="severity">Emergency Severity</label>
+                    <select id="severity">
+                        <option value="Critical">Critical</option>
+                        <option value="Serious">Serious</option>
+                        <option value="Stable">Stable</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="check" for="autoHospital">
+                <input type="checkbox" id="autoHospital" checked>
+                Automatically select the most suitable hospital
+            </label>
+
+            <div class="button-row">
+                <button type="button" id="dispatchBtn" class="danger">
+                    🚑 Dispatch Ambulance
+                </button>
+            </div>
+        </section>
+
+        <!-- Patient queue -->
         <section class="panel" id="queue">
-  <h2>⏱️ Patient Queue & Golden-Hour Monitor</h2>
-  <p>Live countdown and patient vitals tracking. Alerts escalate automatically when critical thresholds are reached.</p>
-  <div id="patientQueue" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px;">
-    <!-- Patient cards will be injected dynamically -->
-  </div>
-</section>
+            <h2>⏱️ Patient Queue &amp; Golden-Hour Monitor</h2>
+            <p>
+                Live countdown and patient vitals tracking. Alerts escalate
+                automatically when critical thresholds are reached.
+            </p>
+            <div
+                id="patientQueue"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px;"
+            >
+                <!-- Patient cards will be injected dynamically -->
+            </div>
+        </section>
+
+        <!-- Dispatch log -->
         <section class="panel" id="log">
             <h2>📋 Dispatch Log</h2>
+
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -437,85 +423,29 @@
                     <tbody id="logBody"></tbody>
                 </table>
             </div>
+
             <div style="margin-top: 14px; display: flex; gap: 10px; align-items: center;">
-    <a href="/api/export/csv" download="dispatches.csv" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background-color: #2a2a2e; color: #ffffff; text-decoration: none; border-radius: 6px; border: 1px solid #444; font-size: 13px; font-weight: 500; cursor: pointer;">
-      📥 Export CSV
-    </a>
-    <a href="/api/export/pdf" download="dispatches.pdf" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background-color: #2a2a2e; color: #ffffff; text-decoration: none; border-radius: 6px; border: 1px solid #444; font-size: 13px; font-weight: 500; cursor: pointer;">
-      📄 Export PDF
-    </a>
-    <button id="clearLog" class="secondary">Clear Log</button>
-  </div>
+                <a href="/api/export/csv" download="dispatches.csv" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background-color: #2a2a2e; color: #ffffff; text-decoration: none; border-radius: 6px; border: 1px solid #444; font-size: 13px; font-weight: 500; cursor: pointer;">
+                    📥 Export CSV
+                </a>
+                <a href="/api/export/pdf" download="dispatches.pdf" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background-color: #2a2a2e; color: #ffffff; text-decoration: none; border-radius: 6px; border: 1px solid #444; font-size: 13px; font-weight: 500; cursor: pointer;">
+                    📄 Export PDF
+                </a>
+                <button type="button" id="clearLog" class="secondary">Clear Log</button>
+            </div>
         </section>
+
+        <footer class="page-footer">
+            <p>RescueRoute · Emergency Route Planning and Dispatch</p>
+            <p>Academic project demonstration</p>
+        </footer>
     </main>
 </div>
-                <div class="button-row">
-                    <button type="button" id="dispatchBtn">
-                        Dispatch Ambulance
-                    </button>
-                </div>
-            </section>
 
-            <!-- Dispatch log -->
-            <section class="panel" id="log">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">RESPONSE HISTORY</p>
-                        <h2>Dispatch Log</h2>
-                        <p>
-                            View previous emergencies and mark active
-                            dispatches as completed.
-                        </p>
-                    </div>
-                    <span class="section-icon">▤</span>
-                </div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Time</th>
-                                <th>Patient</th>
-                                <th>Condition</th>
-                                <th>Severity</th>
-                                <th>Ambulance</th>
-                                <th>Destination</th>
-                                <th>Distance</th>
-                                <th>ETA</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="logBody">
-                            <tr>
-                                <td colspan="10" class="empty">
-                                    Loading dispatch log...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="button-row">
-                    <button type="button" id="clearLog" class="danger">
-                        Clear Dispatch Log
-                    </button>
-                </div>
-            </section>
-
-            <footer class="page-footer">
-                <p>RescueRoute · Emergency Route Planning and Dispatch</p>
-                <p>Academic project demonstration</p>
-            </footer>
-        </main>
-    </div>
-
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-    <!-- Load dependencies before application scripts -->
-    
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Load dependencies before application scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="map.js"></script>
 <script src="animation.js"></script>
 <script src="script.js"></script>
