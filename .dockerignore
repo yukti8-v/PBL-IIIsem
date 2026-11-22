@@ -1,0 +1,5 @@
+*.exe
+*.o
+.git
+__pycache__/
+.env
