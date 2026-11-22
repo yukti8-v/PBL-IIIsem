@@ -13,3 +13,7 @@ data/ambulance_status.json
 scratch/
 testdata/
 __pycache__/
+*.exe
+*.o
+__pycache__/
+.env
