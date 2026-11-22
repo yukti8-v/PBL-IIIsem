@@ -56,9 +56,9 @@ class Handler(SimpleHTTPRequestHandler):
         items = filter_dispatches(read_dispatches(), params)
         items.reverse()  # newest first, like the dashboard
 
-        if len(items) == 0:
+        '''if len(items) == 0:
             self.send_json({"error": "No dispatches to export"}, 404)
-            return
+            return'''
 
         rows = export_rows(items)
         stamp = datetime.now().strftime("%Y%m%d_%H%M")
@@ -107,6 +107,10 @@ class Handler(SimpleHTTPRequestHandler):
 
             if parsed.path == "/api/dispatch":
                 self.send_json(create_dispatch(body), 201)
+                return
+
+            if parsed.path == "/api/escalate":
+                self.send_json({"status": "escalated", "message": "High-priority alert dispatched to emergency response."})
                 return
 
             self.send_json({"error": "Not found"}, 404)
@@ -165,6 +169,50 @@ class Handler(SimpleHTTPRequestHandler):
                 route["hospitalId"] = hospital["location"]
                 route["hospitalName"] = hospital["name"]
                 self.send_json(route)
+
+            except (ValueError, KeyError, IndexError) as e:
+                self.send_json({"error": str(e)}, 400)
+            except Exception as e:
+                self.send_json({"error": str(e)}, 500)
+            return
+        if path == "/api/compare":
+            try:
+                params = parse_qs(parsed.query)
+
+                source = int(params["source"][0])
+                destination = int(params["destination"][0])
+
+                valid_ids = {x["id"] for x in read_locations()}
+
+                if source not in valid_ids or destination not in valid_ids:
+                    raise ValueError("Invalid source or destination")
+
+                blocks = []
+                if params.get("blocks"):
+                    blocks = normalize_blocks(
+                        parse_blocks_text(params["blocks"][0]), valid_ids
+                    )
+
+                dijkstra_result = run_route(
+                    source, destination,
+                    blocks=blocks,
+                    algo="dijkstra",
+                    stats=True
+                )
+
+                astar_result = run_route(
+                    source, destination,
+                    blocks=blocks,
+                    algo="astar",
+                    stats=True
+                )
+
+                self.send_json({
+                    "source": source,
+                    "destination": destination,
+                    "dijkstra": dijkstra_result,
+                    "astar": astar_result
+                })
 
             except (ValueError, KeyError, IndexError) as e:
                 self.send_json({"error": str(e)}, 400)

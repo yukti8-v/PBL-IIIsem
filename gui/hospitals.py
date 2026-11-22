@@ -17,12 +17,25 @@ def read_hospitals():
     with HOSPITALS.open(encoding="utf-8-sig", newline="") as f:
         hospitals = []
         for row in csv.DictReader(f):
+            h_id = int(row["hospital_id"])
+            
+            # Read from CSV if present, otherwise generate realistic values
+            total_beds = int(row.get("total_beds") or (40 + (h_id * 7) % 30))
+            beds = int(row.get("beds") or (total_beds - 5 - (h_id * 3) % 15))
+            
+            total_icu = int(row.get("total_icu") or (10 + (h_id * 3) % 10))
+            icu = int(row.get("icu") or (total_icu - 2 - (h_id * 2) % 6))
+
             hospitals.append({
-                "id": int(row["hospital_id"]),
+                "id": h_id,
                 "name": row["name"].strip(),
                 "location": int(row["location_id"]),
                 "status": row["status"].strip().upper(),
-                "facilities": split_list(row["facilities"])
+                "facilities": split_list(row["facilities"]),
+                "beds": max(0, beds),
+                "total_beds": total_beds,
+                "icu": max(0, icu),
+                "total_icu": total_icu
             })
         return hospitals
 

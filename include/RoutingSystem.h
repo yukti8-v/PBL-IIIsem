@@ -13,6 +13,7 @@ extern "C"
 {
     #include "graph.h"
     #include "dijkstra.h"
+    #include "astar.h"
 }
 
 
@@ -67,9 +68,22 @@ public:
         - whether route was found
     */
     RouteResult getShortestRoute(
-        int source,
-        int destination
-    );
+    int source,
+    int destination,
+    int *nodesVisited = nullptr
+);
+    /*
+    Find shortest route using the A* algorithm.
+
+    coordinates: latitude and longitude of locations
+    nodesVisited: number of nodes expanded by A*
+*/
+RouteResult getAStarRoute(
+    int source,
+    int destination,
+    const AStarCoordinate coordinates[],
+    int *nodesVisited = nullptr
+);
 
 
     /*

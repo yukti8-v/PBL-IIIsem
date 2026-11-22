@@ -15,6 +15,25 @@
 </head>
 
 <body>
+<div class="layout">
+    <aside class="sidebar">
+        <h2>🚑 RescueRoute</h2>
+        <p>Emergency Response System</p>
+        <nav>
+            <a href="#planner">🗺️ Route Planner</a>
+            <a href="#closure">🚧 Road Closure</a>
+            <a href="#results">📊 Route Results</a>
+            <a href="#fleet">🚑 Ambulance Fleet</a>
+            <a href="#hospitals">🏥 Hospitals</a>
+            <a href="#dispatch">🧑‍⚕️ Patient Dispatch</a>
+            <a href="#queue">⏱️ Queue & Vitals</a>
+            <a href="#log">📋 Dispatch Log</a>
+        </nav>
+        <div class="sidebar-bottom">
+            Dehradun Road Network<br>
+            Phase-II Prototype
+        </div>
+    </aside>
     <div class="layout">
 
         <!-- Sidebar -->
@@ -386,6 +405,50 @@
                     Automatically select the most suitable hospital
                 </label>
 
+            <button id="dispatchBtn" class="danger">
+                🚑 Dispatch Ambulance
+            </button>
+        </section>
+        <section class="panel" id="queue">
+  <h2>⏱️ Patient Queue & Golden-Hour Monitor</h2>
+  <p>Live countdown and patient vitals tracking. Alerts escalate automatically when critical thresholds are reached.</p>
+  <div id="patientQueue" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 14px;">
+    <!-- Patient cards will be injected dynamically -->
+  </div>
+</section>
+        <section class="panel" id="log">
+            <h2>📋 Dispatch Log</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Time</th>
+                            <th>Patient</th>
+                            <th>Condition</th>
+                            <th>Severity</th>
+                            <th>Ambulance</th>
+                            <th>Route</th>
+                            <th>Total</th>
+                            <th>ETA</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 10px; align-items: center;">
+    <a href="/api/export/csv" download="dispatches.csv" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background-color: #2a2a2e; color: #ffffff; text-decoration: none; border-radius: 6px; border: 1px solid #444; font-size: 13px; font-weight: 500; cursor: pointer;">
+      📥 Export CSV
+    </a>
+    <a href="/api/export/pdf" download="dispatches.pdf" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background-color: #2a2a2e; color: #ffffff; text-decoration: none; border-radius: 6px; border: 1px solid #444; font-size: 13px; font-weight: 500; cursor: pointer;">
+      📄 Export PDF
+    </a>
+    <button id="clearLog" class="secondary">Clear Log</button>
+  </div>
+        </section>
+    </main>
+</div>
                 <div class="button-row">
                     <button type="button" id="dispatchBtn">
                         Dispatch Ambulance

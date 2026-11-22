@@ -21,7 +21,8 @@ RoutingSystem::RoutingSystem(
 */
 RouteResult RoutingSystem::getShortestRoute(
     int source,
-    int destination
+    int destination,
+    int *nodesVisited
 )
 {
     RouteResult result;
@@ -61,14 +62,21 @@ RouteResult RoutingSystem::getShortestRoute(
     /*
         Call shortestPath() from dijkstra.c
     */
-    int status = shortestPath(
-        graph,
-        source,
-        destination,
-        path,
-        &pathLength,
-        &totalDistance
-    );
+    int localNodesVisited = 0;
+
+int *visitedCount = nodesVisited != nullptr
+    ? nodesVisited
+    : &localNodesVisited;
+
+int status = shortestPathWithStats(
+    graph,
+    source,
+    destination,
+    path,
+    &pathLength,
+    &totalDistance,
+    visitedCount
+);
 
 
     /*
@@ -97,6 +105,63 @@ RouteResult RoutingSystem::getShortestRoute(
         result.path.push_back(path[i]);
     }
 
+
+    return result;
+}
+/*
+    Finds the shortest route using A*.
+*/
+RouteResult RoutingSystem::getAStarRoute(
+    int source,
+    int destination,
+    const AStarCoordinate coordinates[],
+    int *nodesVisited
+)
+{
+    RouteResult result;
+
+    result.distance = -1;
+    result.found = false;
+    result.path.clear();
+
+    if (graph == nullptr)
+    {
+        return result;
+    }
+
+    int path[MAX_LOCATIONS];
+    int pathLength = 0;
+    double totalDistance = 0;
+
+    int localNodesVisited = 0;
+
+    int *visitedCount = nodesVisited != nullptr
+        ? nodesVisited
+        : &localNodesVisited;
+
+    int status = astarShortestPath(
+        graph,
+        coordinates,
+        source,
+        destination,
+        path,
+        &pathLength,
+        &totalDistance,
+        visitedCount
+    );
+
+    if (status != RESULT_SUCCESS)
+    {
+        return result;
+    }
+
+    result.found = true;
+    result.distance = totalDistance;
+
+    for (int i = 0; i < pathLength; i++)
+    {
+        result.path.push_back(path[i]);
+    }
 
     return result;
 }
