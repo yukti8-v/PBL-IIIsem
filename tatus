@@ -1,0 +1,7 @@
+ include/Ambulance.h                         |  55 [32m++++[m
+ include/EmergencyResponseSystem.h           | 131 [32m+++++++++[m
+ include/Hospital.h                          |  50 [32m++++[m
+ src/cpp_modules/Ambulance.cpp               |  81 [32m++++++[m
+ src/cpp_modules/EmergencyResponseSystem.cpp | 396 [32m++++++++++++++++++++++++++++[m
+ src/cpp_modules/Hospital.cpp                |  59 [32m+++++[m
+ 6 files changed, 772 insertions(+)
