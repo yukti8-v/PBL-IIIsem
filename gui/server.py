@@ -175,6 +175,50 @@ class Handler(SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_json({"error": str(e)}, 500)
             return
+        if path == "/api/compare":
+            try:
+                params = parse_qs(parsed.query)
+
+                source = int(params["source"][0])
+                destination = int(params["destination"][0])
+
+                valid_ids = {x["id"] for x in read_locations()}
+
+                if source not in valid_ids or destination not in valid_ids:
+                    raise ValueError("Invalid source or destination")
+
+                blocks = []
+                if params.get("blocks"):
+                    blocks = normalize_blocks(
+                        parse_blocks_text(params["blocks"][0]), valid_ids
+                    )
+
+                dijkstra_result = run_route(
+                    source, destination,
+                    blocks=blocks,
+                    algo="dijkstra",
+                    stats=True
+                )
+
+                astar_result = run_route(
+                    source, destination,
+                    blocks=blocks,
+                    algo="astar",
+                    stats=True
+                )
+
+                self.send_json({
+                    "source": source,
+                    "destination": destination,
+                    "dijkstra": dijkstra_result,
+                    "astar": astar_result
+                })
+
+            except (ValueError, KeyError, IndexError) as e:
+                self.send_json({"error": str(e)}, 400)
+            except Exception as e:
+                self.send_json({"error": str(e)}, 500)
+            return
 
         if path == "/api/route":
             try:
