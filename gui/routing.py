@@ -91,13 +91,24 @@ def parse_blocks_text(text):
 
 # ---------- Routing (calls the C++ executable) ----------
 
-def run_route(source, destination, blocks=None):
+
+def run_route(source, destination, blocks=None, algo="dijkstra", stats=False):
+    if algo not in ("dijkstra", "astar"):
+        raise ValueError("Algorithm must be dijkstra or astar")
+
     args = [str(EXE), str(source), str(destination)]
 
+    # Add blocked roads
     if blocks is not None:
         for pair in blocks:
             args.append(str(pair[0]))
             args.append(str(pair[1]))
+
+    # Select algorithm and optionally request statistics
+    args.extend(["--algo", algo])
+
+    if stats:
+        args.append("--stats")
 
     result = subprocess.run(
         args,
@@ -110,7 +121,14 @@ def run_route(source, destination, blocks=None):
     if result.returncode != 0:
         raise ValueError(result.stderr.strip() or "Routing failed")
 
-    parts = result.stdout.strip().split()
+    # Parse only the first line for route information
+    lines = result.stdout.strip().splitlines()
+
+    if not lines:
+        raise ValueError("Empty routing output")
+
+    parts = lines[0].split()
+
     if len(parts) < 4:
         raise ValueError("Invalid routing output")
 
@@ -123,9 +141,28 @@ def run_route(source, destination, blocks=None):
     if count != len(path):
         raise ValueError("Invalid route path")
 
-    return {
+    response = {
         "found": found,
         "distance": distance if found else None,
         "originalDistance": original if original >= 0 else None,
         "path": path
     }
+
+    # Parse optional statistics from the second line
+    if stats and len(lines) > 1:
+        stats_data = {}
+
+        for item in lines[1].split():
+            if "=" in item:
+                key, value = item.split("=", 1)
+                stats_data[key] = value
+
+        response["algorithm"] = stats_data.get("algorithm", algo)
+        response["nodesVisited"] = int(
+            stats_data.get("nodes_visited", 0)
+        )
+        response["timeUs"] = float(
+            stats_data.get("time_us", 0)
+        )
+
+    return response

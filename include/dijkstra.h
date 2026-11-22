@@ -17,5 +17,14 @@ int shortestPath(
     int *pathLength,
     double *totalDistance
 );
+int shortestPathWithStats(
+    const Graph *graph,
+    int source,
+    int destination,
+    int path[],
+    int *pathLength,
+    double *totalDistance,
+    int *nodesVisited
+);
 
 #endif
